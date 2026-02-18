@@ -404,9 +404,7 @@ def index():
     # Leer filtros
     marca_sel = request.args.get("marca", "")
     talla_sel = request.args.get("talla", "")
-    edad_sel = request.args.get("edad", "")
     categoria_sel = request.args.get("categoria", "")
-    busqueda = request.args.get("busqueda", "")
     tiendas_sel = request.args.getlist("tiendas")
     precio_max_str = request.args.get("precio_max", "")
     orden_actual = request.args.get("orden", "precio_por_unidad")
@@ -422,11 +420,8 @@ def index():
         except ValueError:
             pass
 
-    # Obtener tallas correspondientes a la edad seleccionada
-    tallas_edad = EDAD_A_TALLAS.get(edad_sel, []) if edad_sel else []
-
     # Determinar si hay algun filtro activo
-    hay_filtro = bool(marca_sel or talla_sel or edad_sel or categoria_sel or busqueda or tiendas_sel or precio_max)
+    hay_filtro = bool(marca_sel or talla_sel or categoria_sel or tiendas_sel or precio_max)
 
     # Buscar productos
     productos = []
@@ -439,22 +434,19 @@ def index():
         productos, ultima_fecha = buscar_productos(
             marca=marca_sel or None,
             talla=talla_sel or None,
-            tallas_edad=tallas_edad or None,
             tiendas_sel=tiendas_sel or None,
             precio_max=precio_max,
-            busqueda=busqueda or None,
             categoria=categoria_sel or None,
             orden=orden_actual,
         )
         ahorro = calcular_ahorro(productos)
 
-        # Top por talla: solo cuando NO hay filtro de talla ni edad
-        if not talla_sel and not edad_sel:
+        # Top por talla: solo cuando NO hay filtro de talla
+        if not talla_sel:
             top_por_talla = obtener_top_por_talla(
                 marca=marca_sel or None,
                 tiendas_sel=tiendas_sel or None,
                 precio_max=precio_max,
-                busqueda=busqueda or None,
                 categoria=categoria_sel or None,
             )
     else:
@@ -470,14 +462,10 @@ def index():
 
     # Descripcion OG dinamica para compartir
     og_partes = []
-    if busqueda:
-        og_partes.append(busqueda)
     if marca_sel:
         og_partes.append(marca_sel)
     if talla_sel:
         og_partes.append(f"Talla {talla_sel}")
-    if edad_sel:
-        og_partes.append(edad_sel)
     if hay_filtro and productos:
         mejor = productos[0]
         og_partes.append(
@@ -494,10 +482,7 @@ def index():
         tiendas=tiendas,
         marca_sel=marca_sel,
         talla_sel=talla_sel,
-        edad_sel=edad_sel,
-        edad_a_tallas=EDAD_A_TALLAS,
         categoria_sel=categoria_sel,
-        busqueda=busqueda,
         tiendas_sel=tiendas_sel,
         precio_max=precio_max,
         precio_max_global=precio_max_global,

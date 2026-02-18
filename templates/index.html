@@ -50,13 +50,6 @@
     <form class="filtros" method="GET" action="/">
       <h2>Buscar panales</h2>
 
-      <!-- Busqueda libre -->
-      <div class="filtro-busqueda">
-        <label for="busqueda">Busqueda</label>
-        <input type="text" name="busqueda" id="busqueda" value="{{ busqueda }}"
-               placeholder="Ej: Huggies Active Sec, Pampers Premium...">
-      </div>
-
       <!-- Fila de filtros principales -->
       <div class="filtros-grid">
         <div class="filtro-grupo">
@@ -72,20 +65,8 @@
         </div>
 
         <div class="filtro-grupo">
-          <label for="edad">Edad del bebe</label>
-          <select name="edad" id="edad">
-            <option value="">Todas las edades</option>
-            {% for edad in edad_a_tallas %}
-              <option value="{{ edad }}" {% if edad == edad_sel %}selected{% endif %}>
-                {{ edad }}
-              </option>
-            {% endfor %}
-          </select>
-        </div>
-
-        <div class="filtro-grupo">
           <label for="talla">Talla</label>
-          <select name="talla" id="talla" {% if edad_sel %}disabled{% endif %}>
+          <select name="talla" id="talla">
             <option value="">Todas las tallas</option>
             {% for talla in tallas %}
               <option value="{{ talla }}" {% if talla == talla_sel %}selected{% endif %}>
@@ -179,7 +160,7 @@
         <div class="top-tallas-scroll">
           <div class="top-tallas">
             {% for talla, prod in top_por_talla.items() %}
-            <a href="/?talla={{ talla }}{% if marca_sel %}&marca={{ marca_sel }}{% endif %}{% if busqueda %}&busqueda={{ busqueda }}{% endif %}{% if categoria_sel %}&categoria={{ categoria_sel }}{% endif %}{% for t in tiendas_sel %}&tiendas={{ t }}{% endfor %}" class="top-talla-card">
+            <a href="/?talla={{ talla }}{% if marca_sel %}&marca={{ marca_sel }}{% endif %}{% if categoria_sel %}&categoria={{ categoria_sel }}{% endif %}{% for t in tiendas_sel %}&tiendas={{ t }}{% endfor %}" class="top-talla-card">
               <span class="top-talla-size">{{ talla }}</span>
               <span class="top-talla-nombre" title="{{ prod.nombre }}">{{ prod.nombre }}</span>
               <div class="top-talla-meta">
@@ -427,28 +408,6 @@
       document.getElementById('darkToggle').innerHTML = isDark ? '&#9788;' : '&#9790;';
     })();
 
-    // --- Edad / Talla interaction ---
-    (function() {
-      var edadSelect = document.getElementById('edad');
-      var tallaSelect = document.getElementById('talla');
-      if (!edadSelect || !tallaSelect) return;
-
-      edadSelect.addEventListener('change', function() {
-        if (this.value) {
-          tallaSelect.value = '';
-          tallaSelect.disabled = true;
-        } else {
-          tallaSelect.disabled = false;
-        }
-      });
-
-      tallaSelect.addEventListener('change', function() {
-        if (this.value) {
-          edadSelect.value = '';
-          tallaSelect.disabled = false;
-        }
-      });
-    })();
 
     // --- Comparador lado a lado ---
     (function() {
@@ -655,13 +614,9 @@
         var partes = [];
         var marca = document.getElementById('marca');
         var talla = document.getElementById('talla');
-        var edad = document.getElementById('edad');
-        var busqueda = document.getElementById('busqueda');
         var categoria = document.getElementById('categoria');
-        if (busqueda && busqueda.value) partes.push(busqueda.value);
         if (marca && marca.value) partes.push(marca.value);
         if (talla && talla.value) partes.push('Talla ' + talla.value);
-        if (edad && edad.value) partes.push(edad.value);
         if (categoria && categoria.value) partes.push(categoria.value);
         return partes.join(' - ') || 'Busqueda';
       }
