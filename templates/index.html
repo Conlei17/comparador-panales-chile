@@ -5,11 +5,25 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Comparador de Panales Chile</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script>
+    // Apply dark mode before render to avoid flash
+    if (localStorage.getItem('darkMode') === 'true') {
+      document.documentElement.style.visibility = 'hidden';
+    }
+  </script>
 </head>
 <body>
 
+  <script>
+    if (localStorage.getItem('darkMode') === 'true') {
+      document.body.classList.add('dark');
+      document.documentElement.style.visibility = '';
+    }
+  </script>
+
   <!-- Header -->
   <header class="header">
+    <button class="dark-toggle" onclick="toggleDark()" title="Cambiar tema" id="darkToggle">&#9790;</button>
     <h1>Comparador de Panales Chile</h1>
     <p>Encuentra el mejor precio para los panales de tu bebe</p>
     <nav class="nav">
@@ -61,8 +75,8 @@
           <label for="categoria">Categoria</label>
           <select name="categoria" id="categoria">
             <option value="">Todas</option>
-            <option value="Pañales" {% if categoria_sel == 'Pañales' %}selected{% endif %}>Pañales</option>
-            <option value="Pañales de Agua" {% if categoria_sel == 'Pañales de Agua' %}selected{% endif %}>Pañales de Agua</option>
+            <option value="Pa&ntilde;ales" {% if categoria_sel == 'Pañales' %}selected{% endif %}>Pa&ntilde;ales</option>
+            <option value="Pa&ntilde;ales de Agua" {% if categoria_sel == 'Pañales de Agua' %}selected{% endif %}>Pa&ntilde;ales de Agua</option>
           </select>
         </div>
 
@@ -175,25 +189,60 @@
         <table>
           <thead>
             <tr>
-              <th>Tienda</th>
-              <th>Producto</th>
-              <th>Precio</th>
+              <th>
+                <a href="{{ sort_urls.tienda }}" class="sort-header {{ 'sort-active' if orden_actual == 'tienda' else '' }}">
+                  Tienda <span class="sort-arrow">&#9660;</span>
+                </a>
+              </th>
+              <th>Imagen</th>
+              <th>
+                <a href="{{ sort_urls.marca }}" class="sort-header {{ 'sort-active' if orden_actual == 'marca' else '' }}">
+                  Producto <span class="sort-arrow">&#9660;</span>
+                </a>
+              </th>
+              <th>
+                <a href="{{ sort_urls.precio }}" class="sort-header {{ 'sort-active' if orden_actual == 'precio' else '' }}">
+                  Precio <span class="sort-arrow">&#9660;</span>
+                </a>
+              </th>
               <th>Cantidad</th>
-              <th>Precio/Unidad</th>
+              <th>
+                <a href="{{ sort_urls.precio_por_unidad }}" class="sort-header {{ 'sort-active' if orden_actual == 'precio_por_unidad' else '' }}">
+                  Precio/Unidad <span class="sort-arrow">&#9660;</span>
+                </a>
+              </th>
               <th>Ver</th>
             </tr>
           </thead>
           <tbody>
             {% for p in productos %}
             <tr class="{{ 'fila-mejor' if loop.first else '' }}">
-              <td class="col-tienda">{{ p.tienda }}</td>
+              <td class="col-tienda">
+                {% if logos_tiendas.get(p.tienda) %}
+                  <img src="{{ url_for('static', filename='logos/' + logos_tiendas[p.tienda]) }}" alt="{{ p.tienda }}" class="logo-tienda">
+                {% endif %}
+                {{ p.tienda }}
+              </td>
+              <td>
+                {% if p.imagen_url %}
+                  <img src="{{ p.imagen_url }}" alt="{{ p.nombre }}" class="producto-thumb" loading="lazy">
+                {% endif %}
+              </td>
               <td>
                 {{ p.nombre }}
                 {% if loop.first %}
                   <span class="badge-mejor">Mejor precio</span>
                 {% endif %}
               </td>
-              <td class="col-precio">{{ p.precio|precio }}</td>
+              <td class="col-precio">
+                {% if p.descuento_pct %}
+                  <span class="precio-lista">{{ p.precio_lista|precio }}</span>
+                {% endif %}
+                {{ p.precio|precio }}
+                {% if p.descuento_pct %}
+                  <span class="badge-descuento">-{{ p.descuento_pct }}%</span>
+                {% endif %}
+              </td>
               <td>{{ p.tamano_unidades or '-' }} un.</td>
               <td class="col-ppu">{{ p.precio_por_unidad|precio }}</td>
               <td>
@@ -214,6 +263,9 @@
         {% for p in productos %}
         <div class="card {{ 'card-mejor' if loop.first else '' }}">
           <div class="card-header">
+            {% if p.imagen_url %}
+              <img src="{{ p.imagen_url }}" alt="{{ p.nombre }}" class="card-thumb" loading="lazy">
+            {% endif %}
             <span class="card-nombre">{{ p.nombre }}</span>
             {% if loop.first %}
               <span class="badge-mejor">Mejor precio</span>
@@ -226,7 +278,15 @@
             </div>
             <div>
               <div class="card-label">Precio total</div>
-              <div class="card-value">{{ p.precio|precio }}</div>
+              <div class="card-value">
+                {% if p.descuento_pct %}
+                  <span class="precio-lista">{{ p.precio_lista|precio }}</span>
+                {% endif %}
+                {{ p.precio|precio }}
+                {% if p.descuento_pct %}
+                  <span class="badge-descuento">-{{ p.descuento_pct }}%</span>
+                {% endif %}
+              </div>
             </div>
             <div>
               <div class="card-label">Cantidad</div>
@@ -238,7 +298,12 @@
             </div>
           </div>
           <div class="card-footer">
-            <span class="card-tienda">{{ p.tienda }}</span>
+            <span class="card-tienda">
+              {% if logos_tiendas.get(p.tienda) %}
+                <img src="{{ url_for('static', filename='logos/' + logos_tiendas[p.tienda]) }}" alt="{{ p.tienda }}" class="logo-tienda">
+              {% endif %}
+              {{ p.tienda }}
+            </span>
             {% if p.url %}
               <a href="{{ p.url }}" target="_blank" rel="noopener" class="link-tienda">
                 Ver en tienda &rarr;
@@ -282,6 +347,19 @@
       var formatted = parseInt(valor).toLocaleString('es-CL');
       label.textContent = '$' + formatted.replace(/,/g, '.');
     }
+
+    function toggleDark() {
+      document.body.classList.toggle('dark');
+      var isDark = document.body.classList.contains('dark');
+      localStorage.setItem('darkMode', isDark);
+      document.getElementById('darkToggle').innerHTML = isDark ? '&#9788;' : '&#9790;';
+    }
+
+    // Set correct icon on load
+    (function() {
+      var isDark = document.body.classList.contains('dark');
+      document.getElementById('darkToggle').innerHTML = isDark ? '&#9788;' : '&#9790;';
+    })();
   </script>
 
 </body>

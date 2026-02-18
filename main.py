@@ -43,6 +43,8 @@ COLUMNAS = [
     "url",
     "tienda",
     "fecha_extraccion",
+    "imagen",
+    "precio_lista",
 ]
 COLUMNAS_CONSOLIDADO = COLUMNAS + ["nombre_normalizado", "es_precio_mas_bajo"]
 
@@ -108,6 +110,20 @@ def inicializar_db():
             ON precios(producto_id);
     """)
 
+    # Agregar columna imagen_url a productos si no existe
+    try:
+        cursor.execute("ALTER TABLE productos ADD COLUMN imagen_url TEXT")
+        conn.commit()
+    except sqlite3.OperationalError:
+        pass  # Ya existe
+
+    # Agregar columna precio_lista a precios si no existe
+    try:
+        cursor.execute("ALTER TABLE precios ADD COLUMN precio_lista INTEGER")
+        conn.commit()
+    except sqlite3.OperationalError:
+        pass  # Ya existe
+
     conn.commit()
     return conn
 
@@ -130,7 +146,7 @@ def obtener_o_crear_tienda(cursor, nombre, url_base=None):
     return cursor.lastrowid
 
 
-def obtener_o_crear_producto(cursor, nombre, marca, tamano_unidades, url):
+def obtener_o_crear_producto(cursor, nombre, marca, tamano_unidades, url, imagen_url=None):
     """
     Busca un producto por URL (unica). Si no existe, lo crea.
     Si ya existe, actualiza la cantidad de unidades si cambio
@@ -149,11 +165,17 @@ def obtener_o_crear_producto(cursor, nombre, marca, tamano_unidades, url):
                 "UPDATE productos SET tamano_unidades = ? WHERE id = ?",
                 (tamano_unidades, producto_id),
             )
+        # Actualizar imagen si tenemos una nueva
+        if imagen_url:
+            cursor.execute(
+                "UPDATE productos SET imagen_url = ? WHERE id = ?",
+                (imagen_url, producto_id),
+            )
         return producto_id
 
     cursor.execute(
-        "INSERT INTO productos (nombre, marca, tamano_unidades, url) VALUES (?, ?, ?, ?)",
-        (nombre, marca, tamano_unidades, url),
+        "INSERT INTO productos (nombre, marca, tamano_unidades, url, imagen_url) VALUES (?, ?, ?, ?, ?)",
+        (nombre, marca, tamano_unidades, url, imagen_url),
     )
     return cursor.lastrowid
 
@@ -178,6 +200,9 @@ def guardar_en_db(conn, productos, fecha_scraping):
         "Distribuidora Pepito": "https://www.distribuidorapepito.cl",
         "La Pañalera": "https://www.lapanalera.cl",
         "Pañales Tin Tin": "https://www.panalestintin.cl",
+        "Santa Isabel": "https://www.santaisabel.cl",
+        "Jumbo": "https://www.jumbo.cl",
+        "Farmacias Ahumada": "https://www.farmaciasahumada.cl",
     }
 
     insertados = 0
@@ -193,6 +218,7 @@ def guardar_en_db(conn, productos, fecha_scraping):
             marca=p.get("marca", ""),
             tamano_unidades=p.get("cantidad_unidades"),
             url=p.get("url", ""),
+            imagen_url=p.get("imagen", ""),
         )
 
         # Calculamos precio_por_unidad: precio / cantidad de panales
@@ -203,10 +229,13 @@ def guardar_en_db(conn, productos, fecha_scraping):
         else:
             precio_por_unidad = p.get("precio_por_unidad")
 
+        # Precio lista (para indicador de descuento)
+        precio_lista = p.get("precio_lista")
+
         cursor.execute(
-            """INSERT INTO precios (producto_id, tienda_id, precio, precio_por_unidad, fecha_scraping)
-               VALUES (?, ?, ?, ?, ?)""",
-            (producto_id, tienda_id, precio, precio_por_unidad, fecha_scraping),
+            """INSERT INTO precios (producto_id, tienda_id, precio, precio_por_unidad, precio_lista, fecha_scraping)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            (producto_id, tienda_id, precio, precio_por_unidad, precio_lista, fecha_scraping),
         )
         insertados += 1
 
@@ -308,6 +337,66 @@ def ejecutar_scraper_tintin():
         return False
 
 
+def ejecutar_scraper_santaisabel():
+    """
+    Ejecuta el scraper de Santa Isabel.
+    Retorna True si se ejecuto correctamente.
+    """
+    print("\n")
+    print("=" * 60)
+    print("EJECUTANDO SCRAPER: Santa Isabel")
+    print("=" * 60)
+
+    try:
+        from scrapers import santaisabel_scraper
+        santaisabel_scraper.main()
+        return True
+    except Exception as e:
+        print(f"ERROR ejecutando scraper de Santa Isabel: {e}")
+        print("Continuando con los demas scrapers...\n")
+        return False
+
+
+def ejecutar_scraper_jumbo():
+    """
+    Ejecuta el scraper de Jumbo.
+    Retorna True si se ejecuto correctamente.
+    """
+    print("\n")
+    print("=" * 60)
+    print("EJECUTANDO SCRAPER: Jumbo")
+    print("=" * 60)
+
+    try:
+        from scrapers import jumbo_scraper
+        jumbo_scraper.main()
+        return True
+    except Exception as e:
+        print(f"ERROR ejecutando scraper de Jumbo: {e}")
+        print("Continuando con los demas scrapers...\n")
+        return False
+
+
+def ejecutar_scraper_ahumada():
+    """
+    Ejecuta el scraper de Farmacias Ahumada.
+    Retorna True si se ejecuto correctamente.
+    """
+    print("\n")
+    print("=" * 60)
+    print("EJECUTANDO SCRAPER: Farmacias Ahumada")
+    print("=" * 60)
+
+    try:
+        from scrapers import ahumada_scraper
+        ahumada_scraper.main()
+        return True
+    except Exception as e:
+        print(f"ERROR ejecutando scraper de Farmacias Ahumada: {e}")
+        print("Continuando con los demas scrapers...\n")
+        return False
+
+
 # =============================================================
 # PROCESAMIENTO DE CSV
 # =============================================================
@@ -326,7 +415,7 @@ def leer_csv(ruta):
     with open(ruta, "r", encoding="utf-8") as archivo:
         lector = csv.DictReader(archivo)
         for fila in lector:
-            for campo in ("precio", "cantidad_unidades", "precio_por_unidad"):
+            for campo in ("precio", "cantidad_unidades", "precio_por_unidad", "precio_lista"):
                 if fila.get(campo):
                     try:
                         fila[campo] = int(fila[campo])
@@ -489,6 +578,9 @@ def main():
     resultados["pepito"] = ejecutar_scraper_pepito()
     resultados["lapanalera"] = ejecutar_scraper_lapanalera()
     resultados["tintin"] = ejecutar_scraper_tintin()
+    resultados["santaisabel"] = ejecutar_scraper_santaisabel()
+    resultados["jumbo"] = ejecutar_scraper_jumbo()
+    resultados["ahumada"] = ejecutar_scraper_ahumada()
 
     if not any(resultados.values()):
         print("\nERROR: Ningun scraper se ejecuto correctamente. Abortando.")
@@ -507,6 +599,9 @@ def main():
         "Pepito": os.path.join(CARPETA_DATOS, "pepito_precios.csv"),
         "La Pañalera": os.path.join(CARPETA_DATOS, "lapanalera_precios.csv"),
         "Pañales Tin Tin": os.path.join(CARPETA_DATOS, "tintin_precios.csv"),
+        "Santa Isabel": os.path.join(CARPETA_DATOS, "santaisabel_precios.csv"),
+        "Jumbo": os.path.join(CARPETA_DATOS, "jumbo_precios.csv"),
+        "Farmacias Ahumada": os.path.join(CARPETA_DATOS, "ahumada_precios.csv"),
     }
 
     for tienda, ruta in archivos_csv.items():

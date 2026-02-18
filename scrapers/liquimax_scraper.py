@@ -202,12 +202,16 @@ def extraer_productos(soup):
                 urls_vistas.add(href)
                 nombre = link.get_text(strip=True)
                 if len(nombre) > 5:  # Filtrar links muy cortos que no son nombres
+                    img_elem_fb = link.find_parent().select_one("img") if link.find_parent() else None
+                    imagen_fb = img_elem_fb.get("src") or img_elem_fb.get("data-src") if img_elem_fb else None
                     producto = {
                         "nombre": nombre,
                         "precio": None,
                         "marca": extraer_marca(nombre),
                         "cantidad_unidades": extraer_cantidad(nombre),
                         "precio_por_unidad": None,
+                        "imagen": imagen_fb,
+                        "precio_lista": None,
                         "url": f"https://www.liquimax.cl{href}" if href.startswith("/") else href,
                         "tienda": "Liquimax",
                         "fecha_extraccion": timestamp,
@@ -281,12 +285,18 @@ def extraer_productos(soup):
             if precio and cantidad and cantidad > 0:
                 precio_por_unidad = round(precio / cantidad)
 
+            # --- IMAGEN ---
+            img_elem = contenedor.select_one("img")
+            imagen = img_elem.get("src") or img_elem.get("data-src") if img_elem else None
+
             producto = {
                 "nombre": nombre,
                 "precio": precio,
                 "marca": marca,
                 "cantidad_unidades": cantidad,
                 "precio_por_unidad": precio_por_unidad,
+                "imagen": imagen,
+                "precio_lista": None,
                 "url": url,
                 "tienda": "Liquimax",
                 "fecha_extraccion": timestamp,
@@ -320,6 +330,8 @@ def guardar_csv(productos, ruta_archivo):
         "marca",
         "cantidad_unidades",
         "precio_por_unidad",
+        "imagen",
+        "precio_lista",
         "url",
         "tienda",
         "fecha_extraccion",

@@ -311,12 +311,18 @@ def extraer_productos(soup):
             # La cantidad real se obtiene despues visitando cada producto.
             cantidad = extraer_cantidad_del_nombre(nombre)
 
+            # --- IMAGEN ---
+            img_elem = bloque.select_one("img")
+            imagen = img_elem.get("src") or img_elem.get("data-src") if img_elem else None
+
             producto = {
                 "nombre": nombre,
                 "precio": precio,
                 "marca": marca,
                 "cantidad_unidades": cantidad,
                 "precio_por_unidad": None,
+                "imagen": imagen,
+                "precio_lista": None,
                 "url": url,
                 "tienda": "Distribuidora Pepito",
                 "fecha_extraccion": timestamp,
@@ -346,6 +352,8 @@ def guardar_csv(productos, ruta_archivo):
         "marca",
         "cantidad_unidades",
         "precio_por_unidad",
+        "imagen",
+        "precio_lista",
         "url",
         "tienda",
         "fecha_extraccion",

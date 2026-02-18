@@ -6,11 +6,24 @@
   <title>Historico de Precios - Comparador de Panales Chile</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script>
+    if (localStorage.getItem('darkMode') === 'true') {
+      document.documentElement.style.visibility = 'hidden';
+    }
+  </script>
 </head>
 <body>
 
+  <script>
+    if (localStorage.getItem('darkMode') === 'true') {
+      document.body.classList.add('dark');
+      document.documentElement.style.visibility = '';
+    }
+  </script>
+
   <!-- Header -->
   <header class="header">
+    <button class="dark-toggle" onclick="toggleDark()" title="Cambiar tema" id="darkToggle">&#9790;</button>
     <h1>Comparador de Panales Chile</h1>
     <p>Historico de precios</p>
     <nav class="nav">
@@ -130,6 +143,20 @@
   <footer class="footer">
     Comparador de Panales Chile &middot; Datos actualizados diariamente
   </footer>
+
+  <script>
+    function toggleDark() {
+      document.body.classList.toggle('dark');
+      var isDark = document.body.classList.contains('dark');
+      localStorage.setItem('darkMode', isDark);
+      document.getElementById('darkToggle').innerHTML = isDark ? '&#9788;' : '&#9790;';
+    }
+
+    (function() {
+      var isDark = document.body.classList.contains('dark');
+      document.getElementById('darkToggle').innerHTML = isDark ? '&#9788;' : '&#9790;';
+    })();
+  </script>
 
   {% if producto_info and datos_historico|length > 1 %}
   <script>

@@ -200,12 +200,18 @@ def extraer_productos(soup):
             if precio and cantidad and cantidad > 0:
                 precio_por_unidad = round(precio / cantidad)
 
+            # --- IMAGEN ---
+            img_elem = bloque.select_one("img")
+            imagen = img_elem.get("src") or img_elem.get("data-src") if img_elem else None
+
             producto = {
                 "nombre": nombre,
                 "precio": precio,
                 "marca": marca,
                 "cantidad_unidades": cantidad,
                 "precio_por_unidad": precio_por_unidad,
+                "imagen": imagen,
+                "precio_lista": None,
                 "url": url,
                 "tienda": "Pañales Tin Tin",
                 "fecha_extraccion": timestamp,
@@ -229,7 +235,8 @@ def guardar_csv(productos, ruta_archivo):
 
     columnas = [
         "nombre", "precio", "marca", "cantidad_unidades",
-        "precio_por_unidad", "url", "tienda", "fecha_extraccion",
+        "precio_por_unidad", "imagen", "precio_lista",
+        "url", "tienda", "fecha_extraccion",
     ]
 
     with open(ruta_archivo, "w", newline="", encoding="utf-8") as archivo:

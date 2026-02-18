@@ -15,6 +15,7 @@ import os
 import re
 import sqlite3
 from flask import Flask, render_template, request, jsonify
+from urllib.parse import urlencode
 
 # --- CONFIGURACION ---
 
@@ -32,13 +33,32 @@ EXCLUIR_PATRONES = [
 ]
 
 # Palabras clave para detectar panales de agua
-PANALES_AGUA_KEYWORDS = ["swimmer", "agua", "acuatic"]
+PANALES_AGUA_KEYWORDS = ["swimmer", "agua", "acuatic", "piscina", "splasher"]
 
 # Tallas en orden logico (de mas chico a mas grande)
 ORDEN_TALLAS = [
     "RN", "RN+", "P", "S-M", "M", "G", "P-M",
     "XG", "G-XG", "L", "XXG", "L-XL", "XL", "XXXG",
 ]
+
+# Logos de tiendas (nombre de tienda -> archivo en static/logos/)
+LOGOS_TIENDAS = {
+    "Liquimax": "liquimax.png",
+    "Distribuidora Pepito": "pepito.png",
+    "La Pañalera": "lapanalera.png",
+    "Pañales Tin Tin": "tintin.png",
+    "Santa Isabel": "santaisabel.png",
+    "Jumbo": "jumbo.png",
+    "Farmacias Ahumada": "ahumada.png",
+}
+
+# Columnas permitidas para ordenar (whitelist contra SQL injection)
+ORDEN_PERMITIDO = {
+    "precio_por_unidad": "pr.precio_por_unidad ASC",
+    "precio": "pr.precio ASC",
+    "marca": "p.marca ASC, pr.precio_por_unidad ASC",
+    "tienda": "t.nombre ASC, pr.precio_por_unidad ASC",
+}
 
 
 def conectar_db():
@@ -167,7 +187,8 @@ def obtener_precio_maximo():
 
 
 def buscar_productos(marca=None, talla=None, tiendas_sel=None,
-                     precio_max=None, busqueda=None, categoria=None):
+                     precio_max=None, busqueda=None, categoria=None,
+                     orden="precio_por_unidad"):
     """
     Busca productos con los filtros aplicados.
     Solo retorna precios de la ultima ejecucion del scraper.
@@ -183,8 +204,8 @@ def buscar_productos(marca=None, talla=None, tiendas_sel=None,
         return [], None
 
     query = f"""
-        SELECT p.nombre, p.marca, p.tamano_unidades, p.url,
-               pr.precio, pr.precio_por_unidad, t.nombre as tienda
+        SELECT p.nombre, p.marca, p.tamano_unidades, p.url, p.imagen_url,
+               pr.precio, pr.precio_por_unidad, pr.precio_lista, t.nombre as tienda
         FROM precios pr
         JOIN productos p ON p.id = pr.producto_id
         JOIN tiendas t ON t.id = pr.tienda_id
@@ -218,7 +239,9 @@ def buscar_productos(marca=None, talla=None, tiendas_sel=None,
             query += " AND p.nombre LIKE ?"
             params.append(f"%{palabra}%")
 
-    query += " ORDER BY pr.precio_por_unidad ASC"
+    # Ordenamiento seguro (whitelist)
+    orden_sql = ORDEN_PERMITIDO.get(orden, ORDEN_PERMITIDO["precio_por_unidad"])
+    query += f" ORDER BY {orden_sql}"
 
     cursor.execute(query, params)
     rows = cursor.fetchall()
@@ -230,6 +253,16 @@ def buscar_productos(marca=None, talla=None, tiendas_sel=None,
         producto["talla"] = detectar_talla(producto["nombre"])
         producto["marca_normalizada"] = normalizar_marca(producto["marca"])
         producto["categoria"] = detectar_categoria(producto["nombre"])
+
+        # Calcular descuento
+        precio_lista = producto.get("precio_lista")
+        precio = producto.get("precio")
+        if precio_lista and precio and precio_lista > precio:
+            descuento = round((precio_lista - precio) / precio_lista * 100)
+            producto["descuento_pct"] = descuento
+        else:
+            producto["descuento_pct"] = None
+            producto["precio_lista"] = None
 
         if talla and producto["talla"] != talla:
             continue
@@ -287,6 +320,31 @@ def formatear_precio(precio):
 app.jinja_env.filters["precio"] = formatear_precio
 
 
+def construir_sort_urls(request_args, orden_actual):
+    """Construye URLs para cada columna de ordenamiento, preservando filtros."""
+    sort_urls = {}
+    for col in ORDEN_PERMITIDO:
+        params = {}
+        for key in request_args:
+            if key != "orden":
+                valores = request_args.getlist(key)
+                if len(valores) == 1:
+                    params[key] = valores[0]
+                else:
+                    params[key] = valores
+        params["orden"] = col
+        # Build URL preserving multi-value params (tiendas)
+        parts = []
+        for k, v in params.items():
+            if isinstance(v, list):
+                for item in v:
+                    parts.append(f"{k}={item}")
+            else:
+                parts.append(f"{k}={v}")
+        sort_urls[col] = "/?" + "&".join(parts)
+    return sort_urls
+
+
 # =============================================================
 # RUTAS
 # =============================================================
@@ -306,6 +364,11 @@ def index():
     busqueda = request.args.get("busqueda", "")
     tiendas_sel = request.args.getlist("tiendas")
     precio_max_str = request.args.get("precio_max", "")
+    orden_actual = request.args.get("orden", "precio_por_unidad")
+
+    # Validar orden contra whitelist
+    if orden_actual not in ORDEN_PERMITIDO:
+        orden_actual = "precio_por_unidad"
 
     precio_max = None
     if precio_max_str:
@@ -330,6 +393,7 @@ def index():
             precio_max=precio_max,
             busqueda=busqueda or None,
             categoria=categoria_sel or None,
+            orden=orden_actual,
         )
         ahorro = calcular_ahorro(productos)
     else:
@@ -339,6 +403,9 @@ def index():
         cursor.execute("SELECT MAX(fecha_scraping) FROM precios")
         ultima_fecha = cursor.fetchone()[0]
         conn.close()
+
+    # Construir URLs de ordenamiento
+    sort_urls = construir_sort_urls(request.args, orden_actual)
 
     return render_template(
         "index.html",
@@ -357,6 +424,9 @@ def index():
         total=len(productos),
         ahorro=ahorro,
         hay_filtro=hay_filtro,
+        logos_tiendas=LOGOS_TIENDAS,
+        sort_urls=sort_urls,
+        orden_actual=orden_actual,
     )
 
 
