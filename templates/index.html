@@ -13,6 +13,15 @@
   <meta property="og:image" content="{{ url_for('static', filename='og-image.png', _external=True) }}">
   <meta property="og:url" content="{{ request.url }}">
 
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-H2K7K5G7C2"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-H2K7K5G7C2');
+  </script>
+
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <script>
     // Apply dark mode before render to avoid flash
