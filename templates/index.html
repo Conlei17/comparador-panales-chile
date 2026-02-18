@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Comparador de Panales Chile</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="header">
+    <h1>Comparador de Panales Chile</h1>
+    <p>Encuentra el mejor precio para los panales de tu bebe</p>
+    <nav class="nav">
+      <a href="/" class="nav-link nav-link--active">Comparar precios</a>
+      <a href="/historico" class="nav-link">Historico</a>
+    </nav>
+  </header>
+
+  <div class="container">
+
+    <!-- Filtros -->
+    <form class="filtros" method="GET" action="/">
+      <h2>Buscar panales</h2>
+
+      <!-- Busqueda libre -->
+      <div class="filtro-busqueda">
+        <label for="busqueda">Busqueda</label>
+        <input type="text" name="busqueda" id="busqueda" value="{{ busqueda }}"
+               placeholder="Ej: Huggies Active Sec, Pampers Premium...">
+      </div>
+
+      <!-- Fila de filtros principales -->
+      <div class="filtros-grid">
+        <div class="filtro-grupo">
+          <label for="marca">Marca</label>
+          <select name="marca" id="marca">
+            <option value="">Todas las marcas</option>
+            {% for marca in marcas %}
+              <option value="{{ marca }}" {% if marca == marca_sel %}selected{% endif %}>
+                {{ marca }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="filtro-grupo">
+          <label for="talla">Talla</label>
+          <select name="talla" id="talla">
+            <option value="">Todas las tallas</option>
+            {% for talla in tallas %}
+              <option value="{{ talla }}" {% if talla == talla_sel %}selected{% endif %}>
+                {{ talla }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="filtro-grupo">
+          <label for="categoria">Categoria</label>
+          <select name="categoria" id="categoria">
+            <option value="">Todas</option>
+            <option value="Pañales" {% if categoria_sel == 'Pañales' %}selected{% endif %}>Pañales</option>
+            <option value="Pañales de Agua" {% if categoria_sel == 'Pañales de Agua' %}selected{% endif %}>Pañales de Agua</option>
+          </select>
+        </div>
+
+        <button type="submit" class="btn-buscar">Buscar</button>
+      </div>
+
+      <!-- Filtros avanzados (colapsables) -->
+      <details class="filtros-avanzados">
+        <summary>Filtros avanzados</summary>
+        <div class="filtros-avanzados-body">
+
+          <!-- Precio maximo -->
+          <div class="filtro-slider">
+            <label for="precio_max">
+              Precio maximo del paquete:
+              <span id="precio_max_label" class="slider-value">
+                {% if precio_max %}
+                  ${{ "{:,}".format(precio_max).replace(",", ".") }}
+                {% else %}
+                  Sin limite
+                {% endif %}
+              </span>
+            </label>
+            <input type="range" name="precio_max" id="precio_max"
+                   min="1000" max="{{ precio_max_global }}" step="1000"
+                   value="{{ precio_max or precio_max_global }}"
+                   oninput="actualizarSlider(this.value)">
+            <div class="slider-rango">
+              <span>$1.000</span>
+              <span>${{ "{:,}".format(precio_max_global).replace(",", ".") }}</span>
+            </div>
+          </div>
+
+          <!-- Tiendas -->
+          <div class="filtro-tiendas">
+            <label>Tiendas</label>
+            <div class="checkbox-grupo">
+              {% for tienda in tiendas %}
+              <label class="checkbox-label">
+                <input type="checkbox" name="tiendas" value="{{ tienda }}"
+                       {% if tienda in tiendas_sel or not tiendas_sel %}checked{% endif %}>
+                <span>{{ tienda }}</span>
+              </label>
+              {% endfor %}
+            </div>
+          </div>
+
+        </div>
+      </details>
+    </form>
+
+    <!-- Info -->
+    {% if hay_filtro %}
+    <div class="info-bar">
+      <span class="total">{{ total }} producto{{ 's' if total != 1 else '' }} encontrado{{ 's' if total != 1 else '' }}</span>
+      {% if ultima_fecha %}
+        <span>Actualizado: {{ ultima_fecha[:10] }}</span>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Seccion de ahorro -->
+    {% if ahorro %}
+    <div class="ahorro-card">
+      <div class="ahorro-header">Consejo de ahorro</div>
+      <div class="ahorro-body">
+        <div class="ahorro-comparacion">
+          <div class="ahorro-item ahorro-mejor">
+            <span class="ahorro-etiqueta">Mejor precio</span>
+            <span class="ahorro-precio">{{ ahorro.mejor.precio_por_unidad|precio }}/u</span>
+            <span class="ahorro-nombre">{{ ahorro.mejor.nombre }}</span>
+            <span class="ahorro-tienda">{{ ahorro.mejor.tienda }}</span>
+          </div>
+          <div class="ahorro-vs">vs</div>
+          <div class="ahorro-item ahorro-peor">
+            <span class="ahorro-etiqueta">Mas caro</span>
+            <span class="ahorro-precio">{{ ahorro.peor.precio_por_unidad|precio }}/u</span>
+            <span class="ahorro-nombre">{{ ahorro.peor.nombre }}</span>
+            <span class="ahorro-tienda">{{ ahorro.peor.tienda }}</span>
+          </div>
+        </div>
+        <div class="ahorro-resumen">
+          <p>
+            Comprando el mas barato ahorras
+            <strong>{{ ahorro.diferencia_por_unidad|precio }}</strong> por panal
+            (<strong>{{ "%.0f"|format(ahorro.porcentaje) }}%</strong> menos).
+          </p>
+          <div class="ahorro-desglose">
+            <div class="ahorro-stat">
+              <span class="ahorro-stat-valor">{{ ahorro.ahorro_mensual|precio }}</span>
+              <span class="ahorro-stat-label">ahorro mensual</span>
+              <span class="ahorro-stat-nota">~{{ ahorro.panales_mes }} panales/mes</span>
+            </div>
+            <div class="ahorro-stat">
+              <span class="ahorro-stat-valor">{{ ahorro.ahorro_anual|precio }}</span>
+              <span class="ahorro-stat-label">ahorro anual</span>
+              <span class="ahorro-stat-nota">12 meses</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Resultados -->
+    {% if hay_filtro and productos %}
+
+      <!-- Tabla (desktop) -->
+      <div class="tabla-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Tienda</th>
+              <th>Producto</th>
+              <th>Precio</th>
+              <th>Cantidad</th>
+              <th>Precio/Unidad</th>
+              <th>Ver</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in productos %}
+            <tr class="{{ 'fila-mejor' if loop.first else '' }}">
+              <td class="col-tienda">{{ p.tienda }}</td>
+              <td>
+                {{ p.nombre }}
+                {% if loop.first %}
+                  <span class="badge-mejor">Mejor precio</span>
+                {% endif %}
+              </td>
+              <td class="col-precio">{{ p.precio|precio }}</td>
+              <td>{{ p.tamano_unidades or '-' }} un.</td>
+              <td class="col-ppu">{{ p.precio_por_unidad|precio }}</td>
+              <td>
+                {% if p.url %}
+                  <a href="{{ p.url }}" target="_blank" rel="noopener" class="link-tienda">
+                    Ver en tienda &rarr;
+                  </a>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Cards (movil) -->
+      <div class="cards">
+        {% for p in productos %}
+        <div class="card {{ 'card-mejor' if loop.first else '' }}">
+          <div class="card-header">
+            <span class="card-nombre">{{ p.nombre }}</span>
+            {% if loop.first %}
+              <span class="badge-mejor">Mejor precio</span>
+            {% endif %}
+          </div>
+          <div class="card-body">
+            <div>
+              <div class="card-label">Precio/Unidad</div>
+              <div class="card-ppu">{{ p.precio_por_unidad|precio }}</div>
+            </div>
+            <div>
+              <div class="card-label">Precio total</div>
+              <div class="card-value">{{ p.precio|precio }}</div>
+            </div>
+            <div>
+              <div class="card-label">Cantidad</div>
+              <div class="card-value">{{ p.tamano_unidades or '-' }} unidades</div>
+            </div>
+            <div>
+              <div class="card-label">Marca</div>
+              <div class="card-value">{{ p.marca_normalizada }}</div>
+            </div>
+          </div>
+          <div class="card-footer">
+            <span class="card-tienda">{{ p.tienda }}</span>
+            {% if p.url %}
+              <a href="{{ p.url }}" target="_blank" rel="noopener" class="link-tienda">
+                Ver en tienda &rarr;
+              </a>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+    {% elif hay_filtro %}
+      <!-- Sin resultados -->
+      <div class="empty">
+        <div class="empty-icon">&#x1F50D;</div>
+        <h3>No se encontraron panales</h3>
+        <p>Prueba con otros filtros o una busqueda diferente.</p>
+      </div>
+
+    {% else %}
+      <!-- Estado inicial -->
+      <div class="empty">
+        <div class="empty-icon">&#x1F476;</div>
+        <h3>Selecciona una marca, talla o escribe un nombre</h3>
+        <p>Compara precios entre Liquimax, Distribuidora Pepito, La Panalera y Tintin.</p>
+        {% if ultima_fecha %}
+          <p class="empty-fecha">Datos actualizados el {{ ultima_fecha[:10] }}</p>
+        {% endif %}
+      </div>
+    {% endif %}
+
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    Comparador de Panales Chile &middot; Datos actualizados diariamente
+  </footer>
+
+  <script>
+    function actualizarSlider(valor) {
+      var label = document.getElementById('precio_max_label');
+      var formatted = parseInt(valor).toLocaleString('es-CL');
+      label.textContent = '$' + formatted.replace(/,/g, '.');
+    }
+  </script>
+
+</body>
+</html>

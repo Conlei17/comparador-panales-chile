@@ -1,0 +1,30 @@
+# Entornos virtuales de Python
+venv/
+env/
+.venv/
+
+# Archivos compilados de Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Archivos del sistema operativo
+.DS_Store
+Thumbs.db
+
+# Datos descargados y resultados (pueden ser muy grandes)
+data/*.csv
+data/*.json
+data/*.db
+output/*.csv
+output/*.xlsx
+
+# Logs de ejecucion automatica
+logs/
+
+# Archivos de configuracion del editor
+.vscode/
+.idea/
+
+# Variables de entorno (pueden contener claves secretas)
+.env

@@ -1,0 +1,222 @@
+**********************************************************************
+  COMPARADOR DE PANALES CHILE
+  Reporte de Analisis de Precios
+  Generado el: 2026-02-16 23:08:24
+**********************************************************************
+
+======================================================================
+  RESUMEN GENERAL
+======================================================================
+
+  Total de productos analizados: 275
+
+  - Distribuidora Pepito: 192 productos (192 con precio)
+  - Liquimax: 83 productos (83 con precio)
+
+  Datos extraidos el: 2026-02-16
+
+======================================================================
+  PRECIO PROMEDIO POR TIENDA
+======================================================================
+
+  Promedio general (todos los productos)
+  --------------------------------------
+
+  Distribuidora Pepito:
+    Precio promedio: $14.840
+    Precio minimo:   $2.567
+    Precio maximo:   $42.200
+
+  Liquimax:
+    Precio promedio: $12.027
+    Precio minimo:   $2.890
+    Precio maximo:   $33.990
+
+
+  Promedio por unidad (precio/cantidad de panales)
+  ------------------------------------------------
+  * Solo incluye productos donde se conoce la cantidad
+
+  Distribuidora Pepito:
+    Precio promedio por panal: $330
+    Productos con dato: 185 de 192
+
+  Liquimax:
+    Precio promedio por panal: $347
+    Productos con dato: 83 de 83
+
+
+======================================================================
+  PRODUCTO MAS BARATO EN CADA TIENDA
+======================================================================
+
+  Distribuidora Pepito
+  --------------------
+
+  Mas barato por precio total:
+    Pañal Emubaby Comfort P
+    Precio: $2.567
+    Cantidad: 20 unidades
+    Marca: EMUBABY
+
+  Mas barato por unidad (mejor rendimiento):
+    Pañal Emubaby Comfort P (X8)
+    Precio: $18.391
+    Cantidad: 160 unidades
+    Precio por panal: $115
+    Marca: EMUBABY
+
+
+  Liquimax
+  --------
+
+  Mas barato por precio total:
+    Huggies Active Sec Pañales Talla XXG 10 Unidades
+    Precio: $2.890
+    Cantidad: 10 unidades
+    Marca: Huggies
+
+  Mas barato por unidad (mejor rendimiento):
+    Pampers Confort Sec Pañales Talla M 86 Unidades
+    Precio: $14.990
+    Cantidad: 86 unidades
+    Precio por panal: $174
+    Marca: Pampers
+
+
+======================================================================
+  TIENDA CON MEJORES PRECIOS EN GENERAL
+======================================================================
+
+  Comparando el precio promedio por panal individual:
+
+    1. Distribuidora Pepito: $330 por panal <-- Mas barata
+    2. Liquimax: $347 por panal
+
+  Conclusion: Distribuidora Pepito es en promedio
+  $17 mas barata por panal (4.8% menos)
+  que Liquimax.
+
+  IMPORTANTE: Este promedio mezcla panales de bebe y adulto,
+  packs grandes y chicos, y distintas marcas. Para una comparacion
+  mas precisa, revisa el Top 10 de ofertas mas abajo o filtra
+  por marca/talla en el CSV consolidado.
+
+======================================================================
+  TOP 10 MEJORES OFERTAS DE PANALES
+======================================================================
+
+  Ordenado por precio por panal (de mas barato a mas caro).
+  Solo incluye productos donde se conoce la cantidad.
+
+   1. Pañal Emubaby Comfort P (X8)
+      Tienda:          Distribuidora Pepito
+      Precio total:     $18.391
+      Cantidad:         160 unidades
+      Precio por panal: $115
+      Marca:            EMUBABY
+
+   2. Pañal Emubaby Comfort M (X8)
+      Tienda:          Distribuidora Pepito
+      Precio total:     $18.391
+      Cantidad:         160 unidades
+      Precio por panal: $115
+      Marca:            EMUBABY
+
+   3. Pañal Emubaby Comfort P (X4)
+      Tienda:          Distribuidora Pepito
+      Precio total:     $9.651
+      Cantidad:         80 unidades
+      Precio por panal: $121
+      Marca:            EMUBABY
+
+   4. Pañal Emubaby Comfort M (X4)
+      Tienda:          Distribuidora Pepito
+      Precio total:     $9.651
+      Cantidad:         80 unidades
+      Precio por panal: $121
+      Marca:            EMUBABY
+
+   5. Pañal Emubaby Rn (X2)
+      Tienda:          Distribuidora Pepito
+      Precio total:     $9.990
+      Cantidad:         80 unidades
+      Precio por panal: $125
+      Marca:            EMUBABY
+
+   6. Pañal Emubaby Comfort P
+      Tienda:          Distribuidora Pepito
+      Precio total:     $2.567
+      Cantidad:         20 unidades
+      Precio por panal: $128
+      Marca:            EMUBABY
+
+   7. Pañal Emubaby Comfort M
+      Tienda:          Distribuidora Pepito
+      Precio total:     $2.567
+      Cantidad:         20 unidades
+      Precio por panal: $128
+      Marca:            EMUBABY
+
+   8. Pañal Emubaby Comfort G (X8)
+      Tienda:          Distribuidora Pepito
+      Precio total:     $18.391
+      Cantidad:         144 unidades
+      Precio por panal: $128
+      Marca:            EMUBABY
+
+   9. Pañal Emubaby Comfort G (X4)
+      Tienda:          Distribuidora Pepito
+      Precio total:     $9.651
+      Cantidad:         72 unidades
+      Precio por panal: $134
+      Marca:            EMUBABY
+
+  10. Pañal Emubaby Rn
+      Tienda:          Distribuidora Pepito
+      Precio total:     $5.390
+      Cantidad:         40 unidades
+      Precio por panal: $135
+      Marca:            EMUBABY
+
+
+======================================================================
+  COMPARACION POR MARCA
+======================================================================
+
+  Precio promedio por panal, por marca y tienda.
+  Solo marcas presentes en al menos una tienda con cantidad conocida.
+
+  Babysec:
+    Distribuidora Pepito      promedio $219/u  (minimo $150/u, 29 productos)
+    Liquimax                  promedio $269/u  (minimo $200/u, 20 productos)
+
+  Cotidian:
+    Distribuidora Pepito      promedio $719/u  (minimo $531/u, 7 productos)
+    Liquimax                  promedio $687/u  (minimo $650/u, 4 productos)
+
+  Huggies:
+    Distribuidora Pepito      promedio $233/u  (minimo $178/u, 22 productos)
+    Liquimax                  promedio $286/u  (minimo $197/u, 16 productos)
+
+  Pampers:
+    Distribuidora Pepito      promedio $257/u  (minimo $184/u, 29 productos)
+    Liquimax                  promedio $281/u  (minimo $174/u, 28 productos)
+
+  Plenitud:
+    Distribuidora Pepito      promedio $673/u  (minimo $659/u, 4 productos)
+    Liquimax                  promedio $730/u  (minimo $695/u, 2 productos)
+
+  Tena:
+    Distribuidora Pepito      promedio $796/u  (minimo $337/u, 8 productos)
+    Liquimax                  No disponible
+
+  Win:
+    Distribuidora Pepito      No disponible
+    Liquimax                  promedio $599/u  (minimo $550/u, 6 productos)
+
+
+----------------------------------------------------------------------
+  Fin del reporte.
+  Datos extraidos de: liquimax.cl, distribuidorapepito.cl
+----------------------------------------------------------------------

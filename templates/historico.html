@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Historico de Precios - Comparador de Panales Chile</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="header">
+    <h1>Comparador de Panales Chile</h1>
+    <p>Historico de precios</p>
+    <nav class="nav">
+      <a href="/" class="nav-link">Comparar precios</a>
+      <a href="/historico" class="nav-link nav-link--active">Historico</a>
+    </nav>
+  </header>
+
+  <div class="container">
+
+    <!-- Info del historico -->
+    <div class="historico-info">
+      <span>{{ total_dias }} dia{{ 's' if total_dias != 1 else '' }} de datos</span>
+      {% if fecha_inicio %}
+        <span>Desde {{ fecha_inicio }} hasta {{ fecha_fin }}</span>
+      {% endif %}
+    </div>
+
+    <!-- Buscador de producto -->
+    <form class="filtros" method="GET" action="/historico">
+      <h2>Buscar producto para ver su historico</h2>
+      <div class="filtro-busqueda">
+        <label for="busqueda">Nombre del producto</label>
+        <input type="text" name="busqueda" id="busqueda" value="{{ busqueda }}"
+               placeholder="Ej: Pampers Premium Care XG">
+      </div>
+      <button type="submit" class="btn-buscar" style="margin-top:0.75rem">Buscar</button>
+    </form>
+
+    <!-- Lista de productos encontrados -->
+    {% if productos_lista %}
+    <div class="historico-lista">
+      <h3>Selecciona un producto:</h3>
+      {% for p in productos_lista %}
+      <a href="/historico?producto_id={{ p.id }}&busqueda={{ busqueda }}"
+         class="historico-producto {{ 'historico-producto--active' if producto_id|string == p.id|string else '' }}">
+        <span class="historico-producto-nombre">{{ p.nombre }}</span>
+        <span class="historico-producto-meta">{{ p.marca }} &middot; {{ p.tienda }}</span>
+      </a>
+      {% endfor %}
+    </div>
+    {% elif busqueda %}
+    <div class="empty" style="margin-top:1rem">
+      <h3>No se encontraron productos</h3>
+      <p>Prueba con otro nombre.</p>
+    </div>
+    {% endif %}
+
+    <!-- Grafico de historico -->
+    {% if producto_info and datos_historico %}
+    <div class="historico-detalle">
+      <h3>{{ producto_info.nombre }}</h3>
+      <p class="historico-meta">
+        {{ producto_info.marca }} &middot; {{ producto_info.tienda }}
+        {% if producto_info.tamano_unidades %}
+          &middot; {{ producto_info.tamano_unidades }} unidades
+        {% endif %}
+      </p>
+
+      {% if datos_historico|length > 1 %}
+      <!-- Grafico -->
+      <div class="grafico-container">
+        <canvas id="grafico-precios"></canvas>
+      </div>
+      {% endif %}
+
+      <!-- Tabla de datos -->
+      <div class="tabla-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Precio</th>
+              <th>Precio/Unidad</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for d in datos_historico|reverse %}
+            <tr>
+              <td>{{ d.fecha_scraping[:10] }}</td>
+              <td class="col-precio">${{ "{:,}".format(d.precio).replace(",", ".") }}</td>
+              <td class="col-ppu">
+                {% if d.precio_por_unidad %}
+                  ${{ "{:,}".format(d.precio_por_unidad).replace(",", ".") }}
+                {% else %}
+                  -
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      {% if datos_historico|length == 1 %}
+      <div class="historico-nota">
+        Solo hay 1 registro para este producto. El grafico aparecera cuando
+        haya datos de mas de un dia (ejecuta <code>python main.py</code> diariamente).
+      </div>
+      {% endif %}
+    </div>
+
+    {% elif not busqueda %}
+    <div class="empty" style="margin-top:1rem">
+      <div class="empty-icon">&#x1F4C8;</div>
+      <h3>Busca un producto para ver su historico de precios</h3>
+      <p>
+        Escribe el nombre del panal que quieres seguir y podras
+        ver como cambia su precio con el tiempo.
+      </p>
+    </div>
+    {% endif %}
+
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    Comparador de Panales Chile &middot; Datos actualizados diariamente
+  </footer>
+
+  {% if producto_info and datos_historico|length > 1 %}
+  <script>
+    var datos = {{ datos_historico|tojson }};
+    var fechas = datos.map(function(d) { return d.fecha_scraping.substring(0, 10); });
+    var precios = datos.map(function(d) { return d.precio; });
+    var ppus = datos.map(function(d) { return d.precio_por_unidad; });
+
+    var ctx = document.getElementById('grafico-precios').getContext('2d');
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: fechas,
+        datasets: [
+          {
+            label: 'Precio total ($)',
+            data: precios,
+            borderColor: '#d4a0b9',
+            backgroundColor: 'rgba(212, 160, 185, 0.1)',
+            fill: true,
+            tension: 0.3,
+            pointRadius: 4,
+            pointBackgroundColor: '#d4a0b9',
+          },
+          {
+            label: 'Precio por unidad ($)',
+            data: ppus,
+            borderColor: '#a0c4d4',
+            backgroundColor: 'rgba(160, 196, 212, 0.1)',
+            fill: true,
+            tension: 0.3,
+            pointRadius: 4,
+            pointBackgroundColor: '#a0c4d4',
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: { usePointStyle: true, padding: 20 }
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: false,
+            ticks: {
+              callback: function(value) {
+                return '$' + value.toLocaleString('es-CL');
+              }
+            }
+          }
+        }
+      }
+    });
+  </script>
+  {% endif %}
+
+</body>
+</html>
