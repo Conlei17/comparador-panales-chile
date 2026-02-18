@@ -132,8 +132,10 @@ def buscar_productos_en_json(data):
     dehydrated = data.get("dehydratedState", {})
     queries = dehydrated.get("queries", [])
 
-    # Palabras clave para identificar la categoria de panales
-    palabras_panales = ("pañal", "panal", "toallas húmedas", "toallas humedas", "bebé", "bebe")
+    # Palabras clave especificas para la categoria de panales
+    # (evita falsos positivos con "bebé" que matchea cremas, shampoos, etc.)
+    palabras_panales_exactas = ("pañal", "panal")
+    palabras_panales_amplias = ("toallas húmedas", "toallas humedas")
 
     mejor_lista = []
     mejor_lista_panales = []
@@ -150,13 +152,16 @@ def buscar_productos_en_json(data):
         products = qdata.get("products", [])
         if not isinstance(products, list) or not products:
             continue
-        if not isinstance(products[0], dict) or "items" not in products[0]:
+        if not isinstance(products[0], dict):
             continue
 
         # Verificar si esta query es de la categoria de panales
         cat_names = products[0].get("categoryNames", [])
         cats_lower = " ".join(cat_names).lower()
-        es_panales = any(p in cats_lower for p in palabras_panales)
+        es_panales = (
+            any(p in cats_lower for p in palabras_panales_exactas)
+            or any(p in cats_lower for p in palabras_panales_amplias)
+        )
 
         if es_panales and len(products) > len(mejor_lista_panales):
             mejor_lista_panales = products
