@@ -10,7 +10,7 @@
   <meta property="og:type" content="website">
   <meta property="og:title" content="Comparador de Panales Chile">
   <meta property="og:description" content="{{ og_descripcion }}">
-  <meta property="og:image" content="{{ url_for('static', filename='og-image.svg', _external=True) }}">
+  <meta property="og:image" content="{{ url_for('static', filename='og-image.png', _external=True) }}">
   <meta property="og:url" content="{{ request.url }}">
 
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
@@ -33,7 +33,7 @@
   <!-- Header -->
   <header class="header">
     <button class="dark-toggle" onclick="toggleDark()" title="Cambiar tema" id="darkToggle">&#9790;</button>
-    <h1>Comparador de Panales Chile</h1>
+    <img src="{{ url_for('static', filename='logo.png') }}" alt="Comparador de Panales Chile" class="header-logo">
     <p>Encuentra el mejor precio para los panales de tu bebe</p>
     <nav class="nav">
       <a href="/" class="nav-link nav-link--active">Comparar precios</a>
