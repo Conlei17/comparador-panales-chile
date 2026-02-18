@@ -41,6 +41,17 @@ ORDEN_TALLAS = [
     "XG", "G-XG", "L", "XXG", "L-XL", "XL", "XXXG",
 ]
 
+# Mapeo de rango de edad del bebe a tallas de panal
+EDAD_A_TALLAS = {
+    "0-1 mes": ["RN", "RN+"],
+    "1-3 meses": ["RN+", "P"],
+    "3-6 meses": ["P", "M"],
+    "6-12 meses": ["M", "G"],
+    "12-18 meses": ["G", "XG"],
+    "18-24 meses": ["XG", "XXG"],
+    "+2 anos": ["XXG", "XXXG"],
+}
+
 # Logos de tiendas (nombre de tienda -> archivo en static/logos/)
 LOGOS_TIENDAS = {
     "Liquimax": "liquimax.png",
@@ -186,9 +197,9 @@ def obtener_precio_maximo():
     return resultado or 50000
 
 
-def buscar_productos(marca=None, talla=None, tiendas_sel=None,
-                     precio_max=None, busqueda=None, categoria=None,
-                     orden="precio_por_unidad"):
+def buscar_productos(marca=None, talla=None, tallas_edad=None,
+                     tiendas_sel=None, precio_max=None, busqueda=None,
+                     categoria=None, orden="precio_por_unidad"):
     """
     Busca productos con los filtros aplicados.
     Solo retorna precios de la ultima ejecucion del scraper.
@@ -267,6 +278,9 @@ def buscar_productos(marca=None, talla=None, tiendas_sel=None,
         if talla and producto["talla"] != talla:
             continue
 
+        if tallas_edad and producto["talla"] not in tallas_edad:
+            continue
+
         if categoria and producto["categoria"] != categoria:
             continue
 
@@ -308,6 +322,36 @@ def calcular_ahorro(productos):
         "ahorro_mensual": ahorro_mensual,
         "ahorro_anual": ahorro_anual,
     }
+
+
+def obtener_top_por_talla(marca=None, tiendas_sel=None, precio_max=None,
+                          busqueda=None, categoria=None):
+    """
+    Retorna el producto con menor PPU de cada talla.
+    Dict {talla: producto} ordenado por ORDEN_TALLAS.
+    """
+    productos, _ = buscar_productos(
+        marca=marca, talla=None, tallas_edad=None,
+        tiendas_sel=tiendas_sel, precio_max=precio_max,
+        busqueda=busqueda, categoria=categoria,
+        orden="precio_por_unidad",
+    )
+
+    mejor_por_talla = {}
+    for p in productos:
+        t = p.get("talla")
+        if not t:
+            continue
+        if t not in mejor_por_talla:
+            mejor_por_talla[t] = p
+
+    def orden_talla(item):
+        try:
+            return ORDEN_TALLAS.index(item[0])
+        except ValueError:
+            return 999
+
+    return dict(sorted(mejor_por_talla.items(), key=orden_talla))
 
 
 def formatear_precio(precio):
@@ -360,6 +404,7 @@ def index():
     # Leer filtros
     marca_sel = request.args.get("marca", "")
     talla_sel = request.args.get("talla", "")
+    edad_sel = request.args.get("edad", "")
     categoria_sel = request.args.get("categoria", "")
     busqueda = request.args.get("busqueda", "")
     tiendas_sel = request.args.getlist("tiendas")
@@ -377,18 +422,24 @@ def index():
         except ValueError:
             pass
 
+    # Obtener tallas correspondientes a la edad seleccionada
+    tallas_edad = EDAD_A_TALLAS.get(edad_sel, []) if edad_sel else []
+
     # Determinar si hay algun filtro activo
-    hay_filtro = bool(marca_sel or talla_sel or categoria_sel or busqueda or tiendas_sel or precio_max)
+    hay_filtro = bool(marca_sel or talla_sel or edad_sel or categoria_sel or busqueda or tiendas_sel or precio_max)
 
     # Buscar productos
     productos = []
     ultima_fecha = None
     ahorro = None
 
+    top_por_talla = {}
+
     if hay_filtro:
         productos, ultima_fecha = buscar_productos(
             marca=marca_sel or None,
             talla=talla_sel or None,
+            tallas_edad=tallas_edad or None,
             tiendas_sel=tiendas_sel or None,
             precio_max=precio_max,
             busqueda=busqueda or None,
@@ -396,6 +447,16 @@ def index():
             orden=orden_actual,
         )
         ahorro = calcular_ahorro(productos)
+
+        # Top por talla: solo cuando NO hay filtro de talla ni edad
+        if not talla_sel and not edad_sel:
+            top_por_talla = obtener_top_por_talla(
+                marca=marca_sel or None,
+                tiendas_sel=tiendas_sel or None,
+                precio_max=precio_max,
+                busqueda=busqueda or None,
+                categoria=categoria_sel or None,
+            )
     else:
         # Sin filtros, mostramos la fecha de actualizacion
         conn = conectar_db()
@@ -407,6 +468,25 @@ def index():
     # Construir URLs de ordenamiento
     sort_urls = construir_sort_urls(request.args, orden_actual)
 
+    # Descripcion OG dinamica para compartir
+    og_partes = []
+    if busqueda:
+        og_partes.append(busqueda)
+    if marca_sel:
+        og_partes.append(marca_sel)
+    if talla_sel:
+        og_partes.append(f"Talla {talla_sel}")
+    if edad_sel:
+        og_partes.append(edad_sel)
+    if hay_filtro and productos:
+        mejor = productos[0]
+        og_partes.append(
+            f"Desde {formatear_precio(mejor['precio_por_unidad'])}/unidad"
+        )
+    og_descripcion = " - ".join(og_partes) if og_partes else (
+        "Compara precios de panales entre tiendas chilenas y encuentra el mas barato."
+    )
+
     return render_template(
         "index.html",
         marcas=marcas,
@@ -414,6 +494,8 @@ def index():
         tiendas=tiendas,
         marca_sel=marca_sel,
         talla_sel=talla_sel,
+        edad_sel=edad_sel,
+        edad_a_tallas=EDAD_A_TALLAS,
         categoria_sel=categoria_sel,
         busqueda=busqueda,
         tiendas_sel=tiendas_sel,
@@ -427,6 +509,8 @@ def index():
         logos_tiendas=LOGOS_TIENDAS,
         sort_urls=sort_urls,
         orden_actual=orden_actual,
+        top_por_talla=top_por_talla,
+        og_descripcion=og_descripcion,
     )
 
 

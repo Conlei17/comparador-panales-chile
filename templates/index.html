@@ -4,6 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Comparador de Panales Chile</title>
+
+  <!-- Open Graph: preview al compartir por WhatsApp, redes sociales, etc -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Comparador de Panales Chile">
+  <meta property="og:description" content="{{ og_descripcion }}">
+  <meta property="og:image" content="{{ url_for('static', filename='og-image.svg', _external=True) }}">
+  <meta property="og:url" content="{{ request.url }}">
+
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <script>
     // Apply dark mode before render to avoid flash
@@ -34,6 +42,9 @@
 
   <div class="container">
 
+    <!-- Busquedas recientes (fuera del form, como accesos directos) -->
+    <div class="busquedas-recientes" id="busquedasRecientes" style="display:none;"></div>
+
     <!-- Filtros -->
     <form class="filtros" method="GET" action="/">
       <h2>Buscar panales</h2>
@@ -60,8 +71,20 @@
         </div>
 
         <div class="filtro-grupo">
+          <label for="edad">Edad del bebe</label>
+          <select name="edad" id="edad">
+            <option value="">Todas las edades</option>
+            {% for edad in edad_a_tallas %}
+              <option value="{{ edad }}" {% if edad == edad_sel %}selected{% endif %}>
+                {{ edad }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="filtro-grupo">
           <label for="talla">Talla</label>
-          <select name="talla" id="talla">
+          <select name="talla" id="talla" {% if edad_sel %}disabled{% endif %}>
             <option value="">Todas las tallas</option>
             {% for talla in tallas %}
               <option value="{{ talla }}" {% if talla == talla_sel %}selected{% endif %}>
@@ -80,7 +103,12 @@
           </select>
         </div>
 
-        <button type="submit" class="btn-buscar">Buscar</button>
+        <div class="filtro-botones">
+          <button type="submit" class="btn-buscar">Buscar</button>
+          {% if hay_filtro %}
+            <a href="/" class="btn-limpiar">Limpiar</a>
+          {% endif %}
+        </div>
       </div>
 
       <!-- Filtros avanzados (colapsables) -->
@@ -128,12 +156,40 @@
       </details>
     </form>
 
-    <!-- Info -->
+    <!-- Info + Top por talla (bloque cohesionado) -->
     {% if hay_filtro %}
-    <div class="info-bar">
-      <span class="total">{{ total }} producto{{ 's' if total != 1 else '' }} encontrado{{ 's' if total != 1 else '' }}</span>
-      {% if ultima_fecha %}
-        <span>Actualizado: {{ ultima_fecha[:10] }}</span>
+    <div class="info-panel">
+      <div class="info-bar">
+        <span class="total">{{ total }} producto{{ 's' if total != 1 else '' }} encontrado{{ 's' if total != 1 else '' }}</span>
+        <div class="info-bar-right">
+          <button class="btn-compartir" onclick="compartirBusqueda(this)" title="Copiar link de esta busqueda">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+            <span class="btn-compartir-texto">Compartir</span>
+          </button>
+          {% if ultima_fecha %}
+            <span class="info-fecha">{{ ultima_fecha[:10] }}</span>
+          {% endif %}
+        </div>
+      </div>
+
+      {% if top_por_talla %}
+      <div class="top-tallas-section">
+        <div class="top-tallas-titulo">Mejor precio por talla</div>
+        <div class="top-tallas-scroll">
+          <div class="top-tallas">
+            {% for talla, prod in top_por_talla.items() %}
+            <a href="/?talla={{ talla }}{% if marca_sel %}&marca={{ marca_sel }}{% endif %}{% if busqueda %}&busqueda={{ busqueda }}{% endif %}{% if categoria_sel %}&categoria={{ categoria_sel }}{% endif %}{% for t in tiendas_sel %}&tiendas={{ t }}{% endfor %}" class="top-talla-card">
+              <span class="top-talla-size">{{ talla }}</span>
+              <span class="top-talla-nombre" title="{{ prod.nombre }}">{{ prod.nombre }}</span>
+              <div class="top-talla-meta">
+                <span class="top-talla-ppu">{{ prod.precio_por_unidad|precio }}/u</span>
+                <span class="top-talla-tienda">{{ prod.tienda }}</span>
+              </div>
+            </a>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
       {% endif %}
     </div>
     {% endif %}
@@ -189,6 +245,7 @@
         <table>
           <thead>
             <tr>
+              <th class="col-comparar"></th>
               <th>
                 <a href="{{ sort_urls.tienda }}" class="sort-header {{ 'sort-active' if orden_actual == 'tienda' else '' }}">
                   Tienda <span class="sort-arrow">&#9660;</span>
@@ -217,6 +274,11 @@
           <tbody>
             {% for p in productos %}
             <tr class="{{ 'fila-mejor' if loop.first else '' }}">
+              <td>
+                <input type="checkbox" class="comparar-cb"
+                  data-producto='{{ {"nombre": p.nombre, "precio": p.precio, "ppu": p.precio_por_unidad, "cantidad": p.tamano_unidades, "tienda": p.tienda, "imagen": p.imagen_url or "", "url": p.url or ""}|tojson }}'
+                  onchange="toggleProducto(this, JSON.parse(this.dataset.producto))">
+              </td>
               <td class="col-tienda">
                 {% if logos_tiendas.get(p.tienda) %}
                   <img src="{{ url_for('static', filename='logos/' + logos_tiendas[p.tienda]) }}" alt="{{ p.tienda }}" class="logo-tienda">
@@ -263,6 +325,9 @@
         {% for p in productos %}
         <div class="card {{ 'card-mejor' if loop.first else '' }}">
           <div class="card-header">
+            <input type="checkbox" class="comparar-cb"
+              data-producto='{{ {"nombre": p.nombre, "precio": p.precio, "ppu": p.precio_por_unidad, "cantidad": p.tamano_unidades, "tienda": p.tienda, "imagen": p.imagen_url or "", "url": p.url or ""}|tojson }}'
+              onchange="toggleProducto(this, JSON.parse(this.dataset.producto))">
             {% if p.imagen_url %}
               <img src="{{ p.imagen_url }}" alt="{{ p.nombre }}" class="card-thumb" loading="lazy">
             {% endif %}
@@ -359,6 +424,280 @@
     (function() {
       var isDark = document.body.classList.contains('dark');
       document.getElementById('darkToggle').innerHTML = isDark ? '&#9788;' : '&#9790;';
+    })();
+
+    // --- Edad / Talla interaction ---
+    (function() {
+      var edadSelect = document.getElementById('edad');
+      var tallaSelect = document.getElementById('talla');
+      if (!edadSelect || !tallaSelect) return;
+
+      edadSelect.addEventListener('change', function() {
+        if (this.value) {
+          tallaSelect.value = '';
+          tallaSelect.disabled = true;
+        } else {
+          tallaSelect.disabled = false;
+        }
+      });
+
+      tallaSelect.addEventListener('change', function() {
+        if (this.value) {
+          edadSelect.value = '';
+          tallaSelect.disabled = false;
+        }
+      });
+    })();
+
+    // --- Comparador lado a lado ---
+    (function() {
+      var seleccionados = [];
+      var MAX_COMPARAR = 4;
+
+      // Crear barra flotante
+      var barra = document.createElement('div');
+      barra.className = 'comparar-bar';
+      barra.innerHTML = '<span class="comparar-bar-text"></span><button class="comparar-bar-btn" onclick="abrirComparador()">Comparar</button>';
+      barra.style.display = 'none';
+      document.body.appendChild(barra);
+
+      // Crear modal
+      var modal = document.createElement('div');
+      modal.className = 'comparar-modal';
+      modal.style.display = 'none';
+      document.body.appendChild(modal);
+
+      function actualizarBarra() {
+        if (seleccionados.length >= 2) {
+          barra.style.display = 'flex';
+          barra.querySelector('.comparar-bar-text').textContent = seleccionados.length + ' productos seleccionados';
+        } else {
+          barra.style.display = 'none';
+        }
+      }
+
+      function toggleProducto(cb, datos) {
+        if (cb.checked) {
+          if (seleccionados.length >= MAX_COMPARAR) {
+            cb.checked = false;
+            return;
+          }
+          seleccionados.push(datos);
+        } else {
+          seleccionados = seleccionados.filter(function(p) { return p.nombre !== datos.nombre || p.tienda !== datos.tienda; });
+        }
+        // Sync checkboxes with same product
+        document.querySelectorAll('.comparar-cb').forEach(function(el) {
+          var d = JSON.parse(el.dataset.producto);
+          var estaSeleccionado = seleccionados.some(function(p) { return p.nombre === d.nombre && p.tienda === d.tienda; });
+          el.checked = estaSeleccionado;
+        });
+        actualizarBarra();
+      }
+
+      function formatPrecio(val) {
+        if (!val && val !== 0) return '-';
+        return '$' + Math.round(val).toLocaleString('es-CL').replace(/,/g, '.');
+      }
+
+      window.abrirComparador = function() {
+        if (seleccionados.length < 2) return;
+
+        // Find min PPU
+        var minPPU = Math.min.apply(null, seleccionados.map(function(p) { return p.ppu || Infinity; }));
+
+        var html = '<div class="comparar-contenido">';
+        html += '<div class="comparar-header"><h3>Comparador de productos</h3><button class="comparar-cerrar" onclick="cerrarComparador()">Cerrar</button></div>';
+
+        // Desktop table
+        html += '<div class="comparar-tabla-wrapper"><table class="comparar-tabla"><thead><tr><th>Atributo</th>';
+        seleccionados.forEach(function() { html += '<th>Producto</th>'; });
+        html += '</tr></thead><tbody>';
+
+        // Imagen
+        html += '<tr><td>Imagen</td>';
+        seleccionados.forEach(function(p) {
+          html += '<td>' + (p.imagen ? '<img src="' + p.imagen + '" class="comparar-img">' : '-') + '</td>';
+        });
+        html += '</tr>';
+
+        // Nombre
+        html += '<tr><td>Nombre</td>';
+        seleccionados.forEach(function(p) { html += '<td>' + p.nombre + '</td>'; });
+        html += '</tr>';
+
+        // Tienda
+        html += '<tr><td>Tienda</td>';
+        seleccionados.forEach(function(p) { html += '<td>' + p.tienda + '</td>'; });
+        html += '</tr>';
+
+        // Precio
+        html += '<tr><td>Precio</td>';
+        seleccionados.forEach(function(p) { html += '<td>' + formatPrecio(p.precio) + '</td>'; });
+        html += '</tr>';
+
+        // Cantidad
+        html += '<tr><td>Cantidad</td>';
+        seleccionados.forEach(function(p) { html += '<td>' + (p.cantidad || '-') + ' un.</td>'; });
+        html += '</tr>';
+
+        // PPU
+        html += '<tr><td>Precio/Unidad</td>';
+        seleccionados.forEach(function(p) {
+          var esMejor = p.ppu && p.ppu === minPPU;
+          html += '<td class="' + (esMejor ? 'comparar-mejor' : '') + '">' + formatPrecio(p.ppu) + '</td>';
+        });
+        html += '</tr>';
+
+        // Diferencia vs mas barato
+        html += '<tr><td>Diferencia vs mejor</td>';
+        seleccionados.forEach(function(p) {
+          if (p.ppu && p.ppu === minPPU) {
+            html += '<td class="comparar-mejor">Mejor precio</td>';
+          } else if (p.ppu) {
+            var diff = p.ppu - minPPU;
+            html += '<td>+' + formatPrecio(diff) + '/u</td>';
+          } else {
+            html += '<td>-</td>';
+          }
+        });
+        html += '</tr>';
+
+        html += '</tbody></table></div>';
+
+        // Mobile cards
+        html += '<div class="comparar-cards-movil">';
+        seleccionados.forEach(function(p) {
+          var esMejor = p.ppu && p.ppu === minPPU;
+          html += '<div class="comparar-card-movil' + (esMejor ? ' comparar-card-mejor' : '') + '">';
+          if (p.imagen) html += '<img src="' + p.imagen + '" class="comparar-img">';
+          html += '<div class="comparar-card-nombre">' + p.nombre + '</div>';
+          html += '<div class="comparar-card-detalle"><span>Tienda:</span> ' + p.tienda + '</div>';
+          html += '<div class="comparar-card-detalle"><span>Precio:</span> ' + formatPrecio(p.precio) + '</div>';
+          html += '<div class="comparar-card-detalle"><span>Cantidad:</span> ' + (p.cantidad || '-') + ' un.</div>';
+          html += '<div class="comparar-card-detalle comparar-card-ppu' + (esMejor ? ' comparar-mejor' : '') + '"><span>Precio/Unidad:</span> ' + formatPrecio(p.ppu) + '</div>';
+          if (esMejor) {
+            html += '<div class="comparar-mejor-badge">Mejor precio</div>';
+          } else if (p.ppu) {
+            html += '<div class="comparar-card-detalle"><span>Diferencia:</span> +' + formatPrecio(p.ppu - minPPU) + '/u</div>';
+          }
+          html += '</div>';
+        });
+        html += '</div>';
+
+        html += '</div>';
+        modal.innerHTML = html;
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+      };
+
+      window.cerrarComparador = function() {
+        modal.style.display = 'none';
+        document.body.style.overflow = '';
+      };
+
+      modal.addEventListener('click', function(e) {
+        if (e.target === modal) cerrarComparador();
+      });
+
+      // Expose for inline handlers
+      window.toggleProducto = toggleProducto;
+    })();
+
+    // --- Compartir busqueda ---
+    function compartirBusqueda(btn) {
+      var url = window.location.href;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(function() {
+          mostrarCopiado(btn);
+        });
+      } else {
+        var input = document.createElement('input');
+        input.value = url;
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand('copy');
+        document.body.removeChild(input);
+        mostrarCopiado(btn);
+      }
+    }
+    function mostrarCopiado(btn) {
+      var spanTexto = btn.querySelector('.btn-compartir-texto');
+      if (!spanTexto) return;
+      var textoOriginal = spanTexto.textContent;
+      spanTexto.textContent = 'Copiado!';
+      btn.classList.add('btn-compartir--copiado');
+      setTimeout(function() {
+        spanTexto.textContent = textoOriginal;
+        btn.classList.remove('btn-compartir--copiado');
+      }, 2000);
+    }
+
+    // --- Historial de busquedas recientes ---
+    (function() {
+      var KEY = 'busquedasRecientes';
+      var MAX = 5;
+      var form = document.querySelector('.filtros');
+      var contenedor = document.getElementById('busquedasRecientes');
+
+      function obtenerHistorial() {
+        try {
+          return JSON.parse(localStorage.getItem(KEY)) || [];
+        } catch(e) { return []; }
+      }
+
+      function guardarHistorial(historial) {
+        localStorage.setItem(KEY, JSON.stringify(historial));
+      }
+
+      function crearLabel() {
+        var partes = [];
+        var marca = document.getElementById('marca');
+        var talla = document.getElementById('talla');
+        var edad = document.getElementById('edad');
+        var busqueda = document.getElementById('busqueda');
+        var categoria = document.getElementById('categoria');
+        if (busqueda && busqueda.value) partes.push(busqueda.value);
+        if (marca && marca.value) partes.push(marca.value);
+        if (talla && talla.value) partes.push('Talla ' + talla.value);
+        if (edad && edad.value) partes.push(edad.value);
+        if (categoria && categoria.value) partes.push(categoria.value);
+        return partes.join(' - ') || 'Busqueda';
+      }
+
+      function renderizarChips() {
+        if (!contenedor) return;
+        var historial = obtenerHistorial();
+        if (historial.length === 0) {
+          contenedor.style.display = 'none';
+          return;
+        }
+        contenedor.style.display = 'flex';
+        contenedor.innerHTML = '<span class="busquedas-label">Recientes:</span>';
+        historial.forEach(function(item) {
+          var a = document.createElement('a');
+          a.href = item.url;
+          a.className = 'busqueda-chip';
+          a.textContent = item.label;
+          contenedor.appendChild(a);
+        });
+      }
+
+      if (form) {
+        form.addEventListener('submit', function() {
+          var url = form.action + '?' + new URLSearchParams(new FormData(form)).toString();
+          var label = crearLabel();
+          if (!label || label === 'Busqueda') return;
+          var historial = obtenerHistorial();
+          // Remove duplicate
+          historial = historial.filter(function(item) { return item.url !== url; });
+          historial.unshift({ url: url, label: label });
+          if (historial.length > MAX) historial = historial.slice(0, MAX);
+          guardarHistorial(historial);
+        });
+      }
+
+      renderizarChips();
     })();
   </script>
 

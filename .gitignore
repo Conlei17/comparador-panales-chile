@@ -15,7 +15,7 @@ Thumbs.db
 # Datos descargados y resultados (pueden ser muy grandes)
 data/*.csv
 data/*.json
-data/*.db
+# Nota: precios.db se incluye en git para el deploy (es pequena ~300KB)
 output/*.csv
 output/*.xlsx
 
