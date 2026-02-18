@@ -497,6 +497,14 @@ tbody td {
   color: #fff;
 }
 
+/* --- Fecha de actualizacion en filtros --- */
+.filtros-fecha {
+  margin-top: 0.75rem;
+  font-size: 0.78rem;
+  color: var(--text-lighter);
+  text-align: right;
+}
+
 /* --- Filtros avanzados (colapsable) --- */
 .filtros-avanzados {
   margin-top: 0.75rem;

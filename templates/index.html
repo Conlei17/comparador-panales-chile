@@ -145,6 +145,10 @@
 
         </div>
       </details>
+
+      {% if ultima_fecha %}
+        <div class="filtros-fecha">Precios actualizados el {{ ultima_fecha[:10] }}</div>
+      {% endif %}
     </form>
 
     <!-- Info + Top por talla (bloque cohesionado) -->
