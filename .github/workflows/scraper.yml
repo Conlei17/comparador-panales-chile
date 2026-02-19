@@ -7,6 +7,9 @@ on:
   # Permite ejecutar manualmente desde GitHub
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   scraping:
     runs-on: ubuntu-latest
