@@ -185,6 +185,104 @@ def obtener_tallas():
     return sorted(tallas_set, key=orden_talla)
 
 
+def obtener_opciones_filtros():
+    """
+    Construye un mapping de opciones para filtros en cascada:
+    categoria -> marcas disponibles, y (categoria, marca) -> tallas disponibles.
+    Solo usa productos de la ultima fecha de scraping.
+    """
+    conn = conectar_db()
+    cursor = conn.cursor()
+
+    # Fecha del ultimo scraping
+    cursor.execute("SELECT MAX(fecha_scraping) FROM precios")
+    ultima_fecha = cursor.fetchone()[0]
+    if not ultima_fecha:
+        conn.close()
+        return {"": {"marcas": [], "tallas_por_marca": {"": []}}}
+
+    query = f"""
+        SELECT p.nombre, p.marca
+        FROM precios pr
+        JOIN productos p ON p.id = pr.producto_id
+        WHERE pr.fecha_scraping = ?
+          AND pr.precio IS NOT NULL
+          AND pr.precio_por_unidad IS NOT NULL
+          {query_excluir_no_panales()}
+    """
+    cursor.execute(query, [ultima_fecha])
+    rows = cursor.fetchall()
+    conn.close()
+
+    def orden_talla(t):
+        try:
+            return ORDEN_TALLAS.index(t)
+        except ValueError:
+            return 999
+
+    # Recopilar datos: categoria -> marca -> set de tallas
+    datos = {}  # {categoria: {marca: set(tallas)}}
+    for row in rows:
+        nombre = row["nombre"]
+        marca = normalizar_marca(row["marca"])
+        if not marca:
+            continue
+        categoria = detectar_categoria(nombre)
+        talla = detectar_talla(nombre)
+
+        if categoria not in datos:
+            datos[categoria] = {}
+        if marca not in datos[categoria]:
+            datos[categoria][marca] = set()
+        if talla:
+            datos[categoria][marca].add(talla)
+
+    opciones = {}
+
+    # Por cada categoria
+    for cat, marcas_dict in datos.items():
+        marcas_lista = sorted(marcas_dict.keys())
+        tallas_por_marca = {}
+        # Todas las tallas de la categoria (marca = "")
+        todas_tallas = set()
+        for m, tallas_set in marcas_dict.items():
+            todas_tallas.update(tallas_set)
+            tallas_por_marca[m] = sorted(tallas_set, key=orden_talla)
+        tallas_por_marca[""] = sorted(todas_tallas, key=orden_talla)
+
+        # Para Toallitas Humedas, no hay tallas
+        if cat == "Toallitas Humedas":
+            tallas_por_marca = {}
+
+        opciones[cat] = {
+            "marcas": marcas_lista,
+            "tallas_por_marca": tallas_por_marca,
+        }
+
+    # Entrada global (sin filtro de categoria, key = "")
+    todas_marcas = set()
+    todas_tallas_global = set()
+    tallas_por_marca_global = {}
+    for cat, marcas_dict in datos.items():
+        for m, tallas_set in marcas_dict.items():
+            todas_marcas.add(m)
+            todas_tallas_global.update(tallas_set)
+            if m not in tallas_por_marca_global:
+                tallas_por_marca_global[m] = set()
+            tallas_por_marca_global[m].update(tallas_set)
+
+    tallas_por_marca_global_sorted = {"": sorted(todas_tallas_global, key=orden_talla)}
+    for m, tallas_set in tallas_por_marca_global.items():
+        tallas_por_marca_global_sorted[m] = sorted(tallas_set, key=orden_talla)
+
+    opciones[""] = {
+        "marcas": sorted(todas_marcas),
+        "tallas_por_marca": tallas_por_marca_global_sorted,
+    }
+
+    return opciones
+
+
 def obtener_tiendas():
     """Retorna lista de tiendas disponibles."""
     conn = conectar_db()
@@ -404,8 +502,9 @@ def construir_sort_urls(request_args, orden_actual):
 @app.route("/")
 def index():
     """Pagina principal: buscador y resultados."""
-    marcas = obtener_marcas()
-    tallas = obtener_tallas()
+    opciones_filtros = obtener_opciones_filtros()
+    marcas = opciones_filtros.get("", {}).get("marcas", [])
+    tallas = opciones_filtros.get("", {}).get("tallas_por_marca", {}).get("", [])
     tiendas = obtener_tiendas()
     precio_max_global = obtener_precio_maximo()
 
@@ -504,34 +603,65 @@ def index():
         orden_actual=orden_actual,
         top_por_talla=top_por_talla,
         og_descripcion=og_descripcion,
+        opciones_filtros=opciones_filtros,
     )
 
 
 @app.route("/historico")
 def historico():
     """Pagina de historico de precios."""
+    opciones_filtros = obtener_opciones_filtros()
+    tiendas = obtener_tiendas()
+
     conn = conectar_db()
     cursor = conn.cursor()
 
-    # Producto seleccionado
+    # Leer filtros de selects
     producto_id = request.args.get("producto_id", "")
-    busqueda = request.args.get("busqueda", "")
+    categoria_sel = request.args.get("categoria", "")
+    marca_sel = request.args.get("marca", "")
+    talla_sel = request.args.get("talla", "")
+    tienda_sel = request.args.get("tienda", "")
 
-    # Buscar productos para el selector
+    hay_filtro = bool(categoria_sel or marca_sel or talla_sel or tienda_sel)
+
+    # Buscar productos para el selector (usando selects en cascada)
     productos_lista = []
-    if busqueda:
+    if hay_filtro:
         query = f"""
             SELECT DISTINCT p.id, p.nombre, p.marca, t.nombre as tienda
             FROM productos p
             JOIN precios pr ON pr.producto_id = p.id
             JOIN tiendas t ON t.id = pr.tienda_id
-            WHERE p.nombre LIKE ?
+            WHERE pr.precio IS NOT NULL
+              AND pr.precio_por_unidad IS NOT NULL
               {query_excluir_no_panales()}
-            ORDER BY p.nombre
-            LIMIT 20
         """
-        cursor.execute(query, (f"%{busqueda}%",))
-        productos_lista = [dict(row) for row in cursor.fetchall()]
+        params = []
+
+        if marca_sel:
+            query += " AND LOWER(p.marca) = LOWER(?)"
+            params.append(marca_sel)
+
+        if tienda_sel:
+            query += " AND t.nombre = ?"
+            params.append(tienda_sel)
+
+        query += " ORDER BY p.nombre LIMIT 50"
+        cursor.execute(query, params)
+        rows = [dict(row) for row in cursor.fetchall()]
+
+        # Post-filtro por categoria y talla en Python
+        for row in rows:
+            row["categoria"] = detectar_categoria(row["nombre"])
+            row["talla"] = detectar_talla(row["nombre"])
+
+        for row in rows:
+            if categoria_sel and row["categoria"] != categoria_sel:
+                continue
+            if talla_sel and row["talla"] != talla_sel:
+                continue
+            productos_lista.append(row)
 
     # Datos historicos del producto seleccionado
     datos_historico = []
@@ -570,7 +700,13 @@ def historico():
 
     return render_template(
         "historico.html",
-        busqueda=busqueda,
+        opciones_filtros=opciones_filtros,
+        tiendas=tiendas,
+        categoria_sel=categoria_sel,
+        marca_sel=marca_sel,
+        talla_sel=talla_sel,
+        tienda_sel=tienda_sel,
+        hay_filtro=hay_filtro,
         productos_lista=productos_lista,
         producto_id=producto_id,
         producto_info=producto_info,
