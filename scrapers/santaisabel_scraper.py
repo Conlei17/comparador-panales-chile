@@ -289,6 +289,9 @@ def extraer_productos_de_json(data):
         link = p.get("link") or p.get("linkText") or p.get("slug", "")
         if link and not link.startswith("http"):
             link = f"https://www.santaisabel.cl/{link.lstrip('/')}"
+        # La plataforma Cencosud/VTEX requiere el sufijo /p para paginas de producto
+        if link and not link.endswith("/p"):
+            link = link.rstrip("/") + "/p"
         url = link or ""
 
         cantidad = extraer_cantidad(nombre)
