@@ -53,7 +53,8 @@
     </div>
 
     <!-- Buscador de producto -->
-    <form class="filtros" method="GET" action="/historico">
+    <form class="filtros" method="GET" action="/historico" id="formHistorico"
+          onsubmit="gtag('event','buscar_productos',{pagina:'historico',categoria:document.getElementById('categoria').value,marca:document.getElementById('marca').value,talla:document.getElementById('talla').value,tienda:document.getElementById('tienda').value})">
       <h2>Buscar producto para ver su historico</h2>
 
       <div class="filtros-grid">
@@ -106,7 +107,8 @@
       <h3>Selecciona un producto:</h3>
       {% for p in productos_lista %}
       <a href="/historico?producto_id={{ p.id }}&categoria={{ categoria_sel }}&marca={{ marca_sel }}&talla={{ talla_sel }}&tienda={{ tienda_sel }}"
-         class="historico-producto {{ 'historico-producto--active' if producto_id|string == p.id|string else '' }}">
+         class="historico-producto {{ 'historico-producto--active' if producto_id|string == p.id|string else '' }}"
+         onclick="gtag('event','ver_historico',{producto:'{{ p.nombre|e }}',marca:'{{ p.marca }}',tienda:'{{ p.tienda }}'})">
         <span class="historico-producto-nombre">{{ p.nombre }}</span>
         <span class="historico-producto-meta">{{ p.marca }} &middot; {{ p.tienda }}</span>
       </a>

@@ -56,7 +56,7 @@
     <div class="busquedas-recientes" id="busquedasRecientes" style="display:none;"></div>
 
     <!-- Filtros -->
-    <form class="filtros" method="GET" action="/">
+    <form class="filtros" method="GET" action="/" id="formBuscar">
       <h2>Buscar panales</h2>
 
       <!-- Fila de filtros principales -->
@@ -305,7 +305,8 @@
               <td class="col-ppu">{{ p.precio_por_unidad|precio }}</td>
               <td>
                 {% if p.url %}
-                  <a href="{{ p.url }}" target="_blank" rel="noopener" class="link-tienda">
+                  <a href="{{ p.url }}" target="_blank" rel="noopener" class="link-tienda"
+                     onclick="gtag('event','click_producto_tienda',{tienda:'{{ p.tienda }}',producto:'{{ p.nombre|e }}',precio:{{ p.precio or 0 }}})">
                     Ver en tienda &rarr;
                   </a>
                 {% endif %}
@@ -539,6 +540,11 @@
       window.abrirComparador = function() {
         if (seleccionados.length < 2) return;
 
+        gtag('event', 'comparar_productos', {
+          cantidad: seleccionados.length,
+          productos: seleccionados.map(function(p) { return p.nombre; }).join(' | ')
+        });
+
         // Find min PPU
         var minPPU = Math.min.apply(null, seleccionados.map(function(p) { return p.ppu || Infinity; }));
 
@@ -717,6 +723,15 @@
 
       if (form) {
         form.addEventListener('submit', function() {
+          var cat = document.getElementById('categoria');
+          var mar = document.getElementById('marca');
+          var tal = document.getElementById('talla');
+          gtag('event', 'buscar_productos', {
+            categoria: cat ? cat.value : '',
+            marca: mar ? mar.value : '',
+            talla: tal ? tal.value : ''
+          });
+
           var url = form.action + '?' + new URLSearchParams(new FormData(form)).toString();
           var label = crearLabel();
           if (!label || label === 'Busqueda') return;
