@@ -24,16 +24,21 @@ ARCHIVO_DB = os.path.join(DIR_PROYECTO, "data", "precios.db")
 
 app = Flask(__name__)
 
-# Productos que NO son panales (para excluir de resultados)
+# Productos que NO son panales ni toallitas de bebe (para excluir de resultados)
 EXCLUIR_PATRONES = [
-    "%Toalla%", "%Jabón%", "%Jabon%", "%Shampoo%", "%Acondicionador%",
+    "%Jabón%", "%Jabon%", "%Shampoo%", "%Acondicionador%",
     "%Crema%", "%Pantalla%", "%Protector solar%", "%Protector Mamario%",
     "%Aposito%", "%Apósito%", "%Colonia%", "%Mamadera%", "%Chupete%",
     "%Calzon%", "%Calzón%", "%Pants%",
+    "%Toalla higiénica%", "%Toalla higienica%", "%Toalla Higiénica%",
+    "%Kotex%", "%Nosotras%", "%Aiwina%", "%Familia & Salud%",
 ]
 
 # Palabras clave para detectar panales de agua
 PANALES_AGUA_KEYWORDS = ["swimmer", "agua", "acuatic", "piscina", "splasher"]
+
+# Palabras clave para detectar toallitas humedas de bebe
+TOALLITAS_KEYWORDS = ["toalla húmeda", "toallas húmedas", "toalla humeda", "toallas humedas", "toallita"]
 
 # Tallas en orden logico (de mas chico a mas grande)
 ORDEN_TALLAS = [
@@ -87,10 +92,13 @@ def normalizar_marca(marca):
 
 
 def detectar_categoria(nombre):
-    """Retorna 'Pañales de Agua' si el nombre contiene keywords de swimmers, o 'Pañales'."""
+    """Detecta la categoria del producto: Toallitas Humedas, Pañales de Agua, o Pañales."""
     if not nombre:
         return "Pañales"
     nombre_lower = nombre.lower()
+    for keyword in TOALLITAS_KEYWORDS:
+        if keyword in nombre_lower:
+            return "Toallitas Humedas"
     for keyword in PANALES_AGUA_KEYWORDS:
         if keyword in nombre_lower:
             return "Pañales de Agua"
