@@ -21,8 +21,11 @@ from bs4 import BeautifulSoup
 
 # --- CONFIGURACION ---
 
-# URL base de la categoria de panales
-URL_BASE = "https://www.jumbo.cl/mi-bebe/panales-y-toallas-humedas/panales"
+# URLs de categorias a scrapear
+URLS_CATEGORIAS = [
+    "https://www.jumbo.cl/mi-bebe/panales-y-toallas-humedas/panales",
+    "https://www.jumbo.cl/mi-bebe/leche-y-suplementos-infantiles",
+]
 
 # Carpeta donde se guardara el CSV con los resultados
 CARPETA_DATOS = os.path.join(os.path.dirname(__file__), "..", "data")
@@ -536,56 +539,65 @@ def main():
     print("SCRAPER JUMBO - Comparador de Panales Chile")
     print("=" * 60)
     print(f"Inicio: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print(f"URL: {URL_BASE}")
+    print(f"Categorias: {len(URLS_CATEGORIAS)}")
     print()
 
-    # Paso 1: Descargar la primera pagina
-    print("[1/3] Descargando pagina de panales...")
-    soup_primera = obtener_pagina(URL_BASE)
-
-    if not soup_primera:
-        print("ERROR FATAL: No se pudo descargar la pagina principal. Abortando.")
-        return
-
-    # Paso 2: Intentar extraer productos del JSON
-    print("\n[2/3] Extrayendo productos...")
     todos_los_productos = []
 
-    render_data = extraer_json_datos(soup_primera)
-    if render_data:
-        print("  JSON de productos encontrado. Extrayendo productos del JSON...")
-        productos_pagina = extraer_productos_de_json(render_data)
-        print(f"  Productos encontrados en JSON: {len(productos_pagina)}")
-        todos_los_productos.extend(productos_pagina)
-    else:
-        print("  No se encontro JSON de productos. Usando extraccion HTML...")
-        productos_pagina = extraer_productos_de_html(soup_primera)
-        print(f"  Productos encontrados en HTML: {len(productos_pagina)}")
-        todos_los_productos.extend(productos_pagina)
+    for idx_cat, url_cat in enumerate(URLS_CATEGORIAS, 1):
+        print(f"\n[Categoria {idx_cat}/{len(URLS_CATEGORIAS)}] {url_cat}")
+        print("-" * 60)
 
-    # Paso 2b: Intentar paginar
-    total_paginas = detectar_total_paginas(soup_primera)
-    if total_paginas > 1:
-        print(f"\n  Paginas detectadas: {total_paginas}")
-        for num_pagina in range(2, total_paginas + 1):
-            print(f"\n  --- Pagina {num_pagina} de {total_paginas} ---")
-            url_pagina = f"{URL_BASE}?page={num_pagina}"
-            soup = obtener_pagina(url_pagina)
-            if not soup:
-                continue
+        # Paso 1: Descargar la primera pagina
+        print("  Descargando primera pagina...")
+        soup_primera = obtener_pagina(url_cat)
 
-            render_data = extraer_json_datos(soup)
-            if render_data:
-                productos_pagina = extraer_productos_de_json(render_data)
-            else:
-                productos_pagina = extraer_productos_de_html(soup)
+        if not soup_primera:
+            print(f"  ERROR: No se pudo descargar {url_cat}. Saltando categoria.")
+            continue
 
-            print(f"  Productos encontrados: {len(productos_pagina)}")
+        # Paso 2: Intentar extraer productos del JSON
+        render_data = extraer_json_datos(soup_primera)
+        if render_data:
+            print("  JSON de productos encontrado. Extrayendo productos del JSON...")
+            productos_pagina = extraer_productos_de_json(render_data)
+            print(f"  Productos encontrados en JSON: {len(productos_pagina)}")
+            todos_los_productos.extend(productos_pagina)
+        else:
+            print("  No se encontro JSON de productos. Usando extraccion HTML...")
+            productos_pagina = extraer_productos_de_html(soup_primera)
+            print(f"  Productos encontrados en HTML: {len(productos_pagina)}")
             todos_los_productos.extend(productos_pagina)
 
-            if num_pagina < total_paginas:
-                print(f"  Esperando {PAUSA_ENTRE_PAGINAS}s...")
-                time.sleep(PAUSA_ENTRE_PAGINAS)
+        # Paso 2b: Intentar paginar
+        total_paginas = detectar_total_paginas(soup_primera)
+        if total_paginas > 1:
+            print(f"\n  Paginas detectadas: {total_paginas}")
+            for num_pagina in range(2, total_paginas + 1):
+                print(f"\n  --- Pagina {num_pagina} de {total_paginas} ---")
+                url_pagina = f"{url_cat}?page={num_pagina}"
+                soup = obtener_pagina(url_pagina)
+                if not soup:
+                    continue
+
+                render_data = extraer_json_datos(soup)
+                if render_data:
+                    productos_pagina = extraer_productos_de_json(render_data)
+                else:
+                    productos_pagina = extraer_productos_de_html(soup)
+
+                print(f"  Productos encontrados: {len(productos_pagina)}")
+                todos_los_productos.extend(productos_pagina)
+
+                if num_pagina < total_paginas:
+                    print(f"  Esperando {PAUSA_ENTRE_PAGINAS}s...")
+                    time.sleep(PAUSA_ENTRE_PAGINAS)
+
+        print(f"  Subtotal categoria: {len(productos_pagina)} productos")
+
+        # Pausa entre categorias
+        if idx_cat < len(URLS_CATEGORIAS):
+            time.sleep(PAUSA_ENTRE_PAGINAS)
 
     print(f"\n  Total de productos extraidos: {len(todos_los_productos)}")
 

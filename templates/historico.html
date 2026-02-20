@@ -67,6 +67,7 @@
             <option value="Pa&ntilde;ales" {% if categoria_sel == 'Pañales' %}selected{% endif %}>Pa&ntilde;ales</option>
             <option value="Pa&ntilde;ales de Agua" {% if categoria_sel == 'Pañales de Agua' %}selected{% endif %}>Pa&ntilde;ales de Agua</option>
             <option value="Toallitas Humedas" {% if categoria_sel == 'Toallitas Humedas' %}selected{% endif %}>Toallitas H&uacute;medas</option>
+            <option value="Fórmulas Infantiles" {% if categoria_sel == 'Fórmulas Infantiles' %}selected{% endif %}>F&oacute;rmulas Infantiles</option>
           </select>
         </div>
 
@@ -246,7 +247,7 @@
 
         repoblarSelect(marcaSelect, datos.marcas, mantenerMarca ? undefined : null, 'Todas las marcas');
 
-        if (cat === 'Toallitas Humedas') {
+        if (cat === 'Toallitas Humedas' || cat === 'Fórmulas Infantiles') {
           tallaGrupo.style.display = 'none';
           tallaSelect.value = '';
         } else {

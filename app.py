@@ -40,6 +40,13 @@ PANALES_AGUA_KEYWORDS = ["swimmer", "agua", "acuatic", "piscina", "splasher"]
 # Palabras clave para detectar toallitas humedas de bebe
 TOALLITAS_KEYWORDS = ["toalla húmeda", "toallas húmedas", "toalla humeda", "toallas humedas", "toallita"]
 
+# Palabras clave para detectar formulas infantiles
+FORMULAS_KEYWORDS = [
+    "fórmula", "formula", "leche infantil", "leche en polvo",
+    "nan ", "nido", "similac", "enfamil", "s-26", "s26",
+    "alula", "nidal", "nutrilon", "blemil",
+]
+
 # Tallas en orden logico (de mas chico a mas grande)
 ORDEN_TALLAS = [
     "RN", "RN+", "P", "S-M", "M", "G", "P-M",
@@ -92,10 +99,13 @@ def normalizar_marca(marca):
 
 
 def detectar_categoria(nombre):
-    """Detecta la categoria del producto: Toallitas Humedas, Pañales de Agua, o Pañales."""
+    """Detecta la categoria del producto: Fórmulas Infantiles, Toallitas Humedas, Pañales de Agua, o Pañales."""
     if not nombre:
         return "Pañales"
     nombre_lower = nombre.lower()
+    for keyword in FORMULAS_KEYWORDS:
+        if keyword in nombre_lower:
+            return "Fórmulas Infantiles"
     for keyword in TOALLITAS_KEYWORDS:
         if keyword in nombre_lower:
             return "Toallitas Humedas"
@@ -250,8 +260,8 @@ def obtener_opciones_filtros():
             tallas_por_marca[m] = sorted(tallas_set, key=orden_talla)
         tallas_por_marca[""] = sorted(todas_tallas, key=orden_talla)
 
-        # Para Toallitas Humedas, no hay tallas
-        if cat == "Toallitas Humedas":
+        # Para Toallitas Humedas y Fórmulas Infantiles, no hay tallas
+        if cat in ("Toallitas Humedas", "Fórmulas Infantiles"):
             tallas_por_marca = {}
 
         opciones[cat] = {

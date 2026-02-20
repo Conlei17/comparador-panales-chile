@@ -20,17 +20,23 @@ from bs4 import BeautifulSoup
 
 # --- CONFIGURACION ---
 
-# URL base de la categoria de panales
-URL_BASE = "https://www.farmaciasahumada.cl/infantil-y-maternidad/pa-ales.html"
+# Categorias a scrapear (URL + CGID para API Demandware)
+CATEGORIAS = [
+    {
+        "url": "https://www.farmaciasahumada.cl/infantil-y-maternidad/pa-ales.html",
+        "cgid": "infantil-y-maternidad-mundo-pa%C3%B1ales",
+    },
+    {
+        "url": "https://www.farmaciasahumada.cl/infantil-y-maternidad/lactancia-y-alimentacion/formulas-infantiles.html",
+        "cgid": "infantil-y-maternidad-lactancia-y-alimentacion-formulas-infantiles",
+    },
+]
 
 # URL de la API de paginacion (Demandware Search-UpdateGrid)
 URL_API_GRID = (
     "https://www.farmaciasahumada.cl/on/demandware.store/"
     "Sites-ahumada-cl-Site/default/Search-UpdateGrid"
 )
-
-# Categoria ID para la paginacion
-CGID = "infantil-y-maternidad-mundo-pa%C3%B1ales"
 
 # Cantidad de productos por pagina
 PRODUCTOS_POR_PAGINA = 24
@@ -86,17 +92,18 @@ def obtener_pagina(url):
         return None
 
 
-def obtener_pagina_api(start):
+def obtener_pagina_api(start, cgid):
     """
     Obtiene una pagina de productos usando la API de paginacion de Demandware.
 
     Args:
         start: offset desde donde empezar (0, 24, 48, ...)
+        cgid: categoria ID para la API de Demandware
 
     Retorna:
         BeautifulSoup o None si hubo un error.
     """
-    url = f"{URL_API_GRID}?cgid={CGID}&start={start}&sz={PRODUCTOS_POR_PAGINA}"
+    url = f"{URL_API_GRID}?cgid={cgid}&start={start}&sz={PRODUCTOS_POR_PAGINA}"
     return obtener_pagina(url)
 
 
@@ -404,58 +411,67 @@ def main():
     print("SCRAPER FARMACIAS AHUMADA - Comparador de Panales Chile")
     print("=" * 60)
     print(f"Inicio: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print(f"URL: {URL_BASE}")
+    print(f"Categorias: {len(CATEGORIAS)}")
     print()
 
-    # Paso 1: Descargar la primera pagina
-    print("[1/3] Descargando primera pagina para detectar paginacion...")
-    soup_primera = obtener_pagina(URL_BASE)
-
-    if not soup_primera:
-        print("ERROR FATAL: No se pudo descargar la pagina principal. Abortando.")
-        return
-
-    # Paso 2: Detectar paginacion y extraer productos
-    total_paginas = detectar_total_paginas(soup_primera)
-    print(f"  Paginas detectadas: {total_paginas}")
-    print()
-
-    print("[2/3] Extrayendo productos de todas las paginas...")
     todos_los_productos = []
 
-    # Primera pagina: extraer del HTML ya descargado
-    print("\n--- Pagina 1 ---")
-    productos_pagina = extraer_productos(soup_primera)
-    print(f"  Productos encontrados en esta pagina: {len(productos_pagina)}")
-    todos_los_productos.extend(productos_pagina)
+    for idx_cat, cat_info in enumerate(CATEGORIAS, 1):
+        url_cat = cat_info["url"]
+        cgid = cat_info["cgid"]
 
-    # Paginas siguientes: usar la API de paginacion
-    # Usamos un maximo de seguridad para evitar loops infinitos
-    MAX_PAGINAS = 20
-    pagina_actual = 2
+        print(f"\n[Categoria {idx_cat}/{len(CATEGORIAS)}] {url_cat}")
+        print("-" * 60)
 
-    while pagina_actual <= max(total_paginas, MAX_PAGINAS):
-        start = (pagina_actual - 1) * PRODUCTOS_POR_PAGINA
-        print(f"\n--- Pagina {pagina_actual} (offset {start}) ---")
+        # Paso 1: Descargar la primera pagina
+        print("  Descargando primera pagina para detectar paginacion...")
+        soup_primera = obtener_pagina(url_cat)
 
-        soup = obtener_pagina_api(start)
-        if not soup:
-            print("  No se pudo descargar. Deteniendo paginacion.")
-            break
+        if not soup_primera:
+            print(f"  ERROR: No se pudo descargar {url_cat}. Saltando categoria.")
+            continue
 
-        productos_pagina = extraer_productos(soup)
+        # Paso 2: Detectar paginacion y extraer productos
+        total_paginas = detectar_total_paginas(soup_primera)
+        print(f"  Paginas detectadas: {total_paginas}")
+
+        # Primera pagina: extraer del HTML ya descargado
+        print("\n  --- Pagina 1 ---")
+        productos_pagina = extraer_productos(soup_primera)
         print(f"  Productos encontrados en esta pagina: {len(productos_pagina)}")
-
-        # Si no encontramos productos, terminamos la paginacion
-        if not productos_pagina:
-            print("  No se encontraron mas productos. Fin de la paginacion.")
-            break
-
         todos_los_productos.extend(productos_pagina)
-        pagina_actual += 1
 
-        print(f"  Esperando {PAUSA_ENTRE_PAGINAS}s antes de la siguiente pagina...")
-        time.sleep(PAUSA_ENTRE_PAGINAS)
+        # Paginas siguientes: usar la API de paginacion
+        MAX_PAGINAS = 20
+        pagina_actual = 2
+
+        while pagina_actual <= max(total_paginas, MAX_PAGINAS):
+            start = (pagina_actual - 1) * PRODUCTOS_POR_PAGINA
+            print(f"\n  --- Pagina {pagina_actual} (offset {start}) ---")
+
+            soup = obtener_pagina_api(start, cgid)
+            if not soup:
+                print("  No se pudo descargar. Deteniendo paginacion.")
+                break
+
+            productos_pagina = extraer_productos(soup)
+            print(f"  Productos encontrados en esta pagina: {len(productos_pagina)}")
+
+            if not productos_pagina:
+                print("  No se encontraron mas productos. Fin de la paginacion.")
+                break
+
+            todos_los_productos.extend(productos_pagina)
+            pagina_actual += 1
+
+            print(f"  Esperando {PAUSA_ENTRE_PAGINAS}s antes de la siguiente pagina...")
+            time.sleep(PAUSA_ENTRE_PAGINAS)
+
+        print(f"  Subtotal categoria: {len(productos_pagina)} productos")
+
+        # Pausa entre categorias
+        if idx_cat < len(CATEGORIAS):
+            time.sleep(PAUSA_ENTRE_PAGINAS)
 
     print(f"\n  Total de productos extraidos: {len(todos_los_productos)}")
 
