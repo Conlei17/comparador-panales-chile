@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Comparador de Panales Chile</title>
+  <title>BabyAhorro - Comparador de precios de cosas de beb&eacute;</title>
   <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon-32x32.png') }}">
 
   <!-- Open Graph: preview al compartir por WhatsApp, redes sociales, etc -->
   <meta property="og:type" content="website">
-  <meta property="og:title" content="Comparador de Panales Chile">
+  <meta property="og:title" content="BabyAhorro - Comparador de precios de cosas de beb&eacute;">
   <meta property="og:description" content="{{ og_descripcion }}">
   <meta property="og:image" content="{{ url_for('static', filename='og-image.png', _external=True) }}">
   <meta property="og:url" content="{{ request.url }}">
@@ -44,7 +44,7 @@
   <!-- Header -->
   <header class="header">
     <button class="dark-toggle" onclick="toggleDark()" title="Cambiar tema" id="darkToggle">&#9790;</button>
-    <img src="{{ url_for('static', filename='logo.png') }}" alt="Comparador de Panales Chile" class="header-logo">
+    <img src="{{ url_for('static', filename='logo.png') }}" alt="BabyAhorro" class="header-logo">
     <p>Encuentra el mejor precio para los panales de tu bebe</p>
     <nav class="nav">
       <a href="/" class="nav-link nav-link--active">Comparar precios</a>
@@ -402,7 +402,7 @@
 
   <!-- Footer -->
   <footer class="footer">
-    Comparador de Panales Chile &middot; Datos actualizados diariamente
+    BabyAhorro &middot; Datos actualizados diariamente
     <br>Hecho con &hearts; por Constanza Leiva
   </footer>
 
