@@ -5,26 +5,26 @@
 
 /* --- Variables de color --- */
 :root {
-  --bg-body: #faf5f7;
+  --bg-body: #fdf8f4;
   --bg-surface: #fff;
-  --bg-surface-hover: #fdf5f8;
-  --bg-input: #fdf8fa;
+  --bg-surface-hover: #fef6f0;
+  --bg-input: #fefaf6;
   --text-primary: #4a4a4a;
   --text-secondary: #6b6b6b;
   --text-muted: #888;
   --text-light: #aaa;
   --text-lighter: #bbb;
-  --border-light: #e8dce2;
-  --border-lighter: #f5eff2;
-  --gradient-header-start: #e8b4c8;
-  --gradient-header-end: #b8d4e8;
-  --gradient-btn-start: #d4a0b9;
-  --gradient-btn-end: #a0c4d4;
-  --gradient-thead-start: #f0dce6;
-  --gradient-thead-end: #dce8f0;
-  --accent-pink: #d4a0b9;
-  --accent-blue: #a0c4d4;
-  --ppu-color: #c46b8a;
+  --border-light: #ede4da;
+  --border-lighter: #f5f0ea;
+  --gradient-header-start: #f4b8a8;
+  --gradient-header-end: #d4b8e8;
+  --gradient-btn-start: #e8a898;
+  --gradient-btn-end: #b8a8d8;
+  --gradient-thead-start: #fce8e0;
+  --gradient-thead-end: #e8e0f0;
+  --accent-pink: #e8a898;
+  --accent-blue: #b8a8d8;
+  --ppu-color: #c47858;
   --best-green: #3a8a55;
   --best-bg: #f0faf3;
   --best-border: #c8e6cf;
@@ -32,13 +32,13 @@
   --worst-red: #c46b6b;
   --worst-bg: #fdf5f5;
   --worst-border: #e8d0d0;
-  --shadow: rgba(0, 0, 0, 0.06);
-  --shadow-header: rgba(0, 0, 0, 0.1);
-  --link-color: #a0b8d0;
-  --link-hover: #7a9ab8;
-  --slider-value: #c46b8a;
+  --shadow: rgba(0, 0, 0, 0.04);
+  --shadow-header: rgba(0, 0, 0, 0.08);
+  --link-color: #c4a07a;
+  --link-hover: #a8845e;
+  --slider-value: #c47858;
   --advanced-color: #a088a0;
-  --historico-active-bg: #f0dce6;
+  --historico-active-bg: #fce8e0;
   --nota-bg: #fdf8e8;
   --nota-color: #8a7a40;
   --nota-code-bg: rgba(0, 0, 0, 0.06);
@@ -50,40 +50,40 @@
 }
 
 body.dark {
-  --bg-body: #1a1a2e;
-  --bg-surface: #16213e;
-  --bg-surface-hover: #1a2545;
-  --bg-input: #1e2a4a;
-  --text-primary: #e0e0e0;
-  --text-secondary: #b0b0b0;
-  --text-muted: #909090;
-  --text-light: #787878;
-  --text-lighter: #606060;
-  --border-light: #2a3a5e;
-  --border-lighter: #1e2e52;
-  --gradient-header-start: #2a1a3e;
-  --gradient-header-end: #1a2a4e;
-  --gradient-btn-start: #6a3a5a;
-  --gradient-btn-end: #3a5a7a;
-  --gradient-thead-start: #1e2a4a;
-  --gradient-thead-end: #1a2545;
-  --accent-pink: #c490a9;
-  --accent-blue: #90b4c4;
-  --ppu-color: #e08aaa;
+  --bg-body: #1e1a16;
+  --bg-surface: #2a2420;
+  --bg-surface-hover: #322a24;
+  --bg-input: #302820;
+  --text-primary: #e0d8d0;
+  --text-secondary: #b0a898;
+  --text-muted: #908880;
+  --text-light: #787068;
+  --text-lighter: #605850;
+  --border-light: #3e3630;
+  --border-lighter: #342e28;
+  --gradient-header-start: #3e2a20;
+  --gradient-header-end: #2a2040;
+  --gradient-btn-start: #8a5a4a;
+  --gradient-btn-end: #5a4a7a;
+  --gradient-thead-start: #302820;
+  --gradient-thead-end: #2a2430;
+  --accent-pink: #d4a090;
+  --accent-blue: #a898c8;
+  --ppu-color: #e0a080;
   --best-green: #5cb87a;
-  --best-bg: #1a2e1a;
+  --best-bg: #1e2a1a;
   --best-border: #2a4e2a;
-  --best-card-bg: #1a2e1e;
+  --best-card-bg: #1e2a1e;
   --worst-red: #e07070;
   --worst-bg: #2e1a1a;
   --worst-border: #4e2a2a;
   --shadow: rgba(0, 0, 0, 0.3);
   --shadow-header: rgba(0, 0, 0, 0.4);
-  --link-color: #90b0d0;
-  --link-hover: #a0c0e0;
-  --slider-value: #e08aaa;
+  --link-color: #c4a880;
+  --link-hover: #d8bc98;
+  --slider-value: #e0a080;
   --advanced-color: #b098b0;
-  --historico-active-bg: #2a1a3e;
+  --historico-active-bg: #3e2a20;
   --nota-bg: #2e2a1a;
   --nota-color: #c0b060;
   --nota-code-bg: rgba(255, 255, 255, 0.1);
@@ -102,20 +102,25 @@ body.dark {
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   background-color: var(--bg-body);
   color: var(--text-primary);
   line-height: 1.6;
   transition: background-color 0.3s, color 0.3s;
 }
 
+h1, h2, h3, .badge-mejor, .badge-descuento, .top-tallas-titulo, .ahorro-header {
+  font-family: 'Nunito', sans-serif;
+}
+
 /* --- Header --- */
 .header {
   background: linear-gradient(135deg, var(--gradient-header-start), var(--gradient-header-end));
-  padding: 1.5rem 1rem;
+  padding: 2rem 1rem;
   text-align: center;
   box-shadow: 0 2px 8px var(--shadow-header);
   position: relative;
+  border-radius: 0 0 24px 24px;
 }
 
 .header-logo {
@@ -170,10 +175,11 @@ body {
 /* --- Filtros --- */
 .filtros {
   background: var(--bg-surface);
-  border-radius: 12px;
+  border-radius: 16px;
   padding: 1.25rem;
   margin-bottom: 1.25rem;
-  box-shadow: 0 2px 8px var(--shadow);
+  box-shadow: 0 4px 16px var(--shadow);
+  border: 1px solid var(--border-lighter);
 }
 
 .filtros h2 {
@@ -207,7 +213,7 @@ body {
   width: 100%;
   padding: 0.6rem 0.75rem;
   border: 2px solid var(--border-light);
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 1rem;
   color: var(--text-primary);
   background-color: var(--bg-input);
@@ -226,11 +232,11 @@ body {
 
 .btn-buscar {
   align-self: flex-end;
-  padding: 0.6rem 1.5rem;
+  padding: 0.7rem 1.75rem;
   background: linear-gradient(135deg, var(--gradient-btn-start), var(--gradient-btn-end));
   color: #fff;
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
@@ -245,10 +251,11 @@ body {
 /* --- Info panel (info-bar + top-tallas cohesionados) --- */
 .info-panel {
   background: var(--bg-surface);
-  border-radius: 12px;
+  border-radius: 16px;
   padding: 0.85rem 1rem;
   margin-bottom: 1.25rem;
-  box-shadow: 0 2px 8px var(--shadow);
+  box-shadow: 0 4px 16px var(--shadow);
+  border: 1px solid var(--border-lighter);
 }
 
 .info-bar {
@@ -281,9 +288,9 @@ table {
   width: 100%;
   border-collapse: collapse;
   background: var(--bg-surface);
-  border-radius: 12px;
+  border-radius: 16px;
   overflow: hidden;
-  box-shadow: 0 2px 8px var(--shadow);
+  box-shadow: 0 4px 16px var(--shadow);
   font-size: 0.9rem;
 }
 
@@ -376,10 +383,11 @@ tbody td {
 
 .card {
   background: var(--bg-surface);
-  border-radius: 12px;
+  border-radius: 16px;
   padding: 1rem;
   margin-bottom: 0.75rem;
-  box-shadow: 0 2px 8px var(--shadow);
+  box-shadow: 0 4px 16px var(--shadow);
+  border: 1px solid var(--border-lighter);
 }
 
 .card-mejor {
@@ -449,8 +457,9 @@ tbody td {
   text-align: center;
   padding: 3rem 1rem;
   background: var(--bg-surface);
-  border-radius: 12px;
-  box-shadow: 0 2px 8px var(--shadow);
+  border-radius: 16px;
+  box-shadow: 0 4px 16px var(--shadow);
+  border: 1px solid var(--border-lighter);
 }
 
 .empty-icon {
@@ -605,10 +614,11 @@ tbody td {
 /* --- Seccion de ahorro --- */
 .ahorro-card {
   background: var(--bg-surface);
-  border-radius: 12px;
-  box-shadow: 0 2px 8px var(--shadow);
+  border-radius: 16px;
+  box-shadow: 0 4px 16px var(--shadow);
   margin-bottom: 1.25rem;
   overflow: hidden;
+  border: 1px solid var(--border-lighter);
 }
 
 .ahorro-header {
@@ -795,10 +805,11 @@ tbody td {
 
 .historico-detalle {
   background: var(--bg-surface);
-  border-radius: 12px;
+  border-radius: 16px;
   padding: 1.25rem;
-  box-shadow: 0 2px 8px var(--shadow);
+  box-shadow: 0 4px 16px var(--shadow);
   margin-top: 1rem;
+  border: 1px solid var(--border-lighter);
 }
 
 .historico-detalle h3 {
@@ -961,7 +972,7 @@ tbody td {
   color: var(--gradient-btn-start);
   border: none;
   padding: 0.5rem 1.5rem;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 0.95rem;
   font-weight: 700;
   cursor: pointer;
@@ -992,7 +1003,7 @@ tbody td {
   max-height: 90vh;
   overflow-y: auto;
   padding: 1.5rem;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
 }
 
 .comparar-header {
@@ -1011,7 +1022,7 @@ tbody td {
   background: var(--border-light);
   border: none;
   padding: 0.4rem 1rem;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
@@ -1171,11 +1182,11 @@ tbody td {
 }
 
 .btn-limpiar {
-  padding: 0.6rem 1rem;
+  padding: 0.7rem 1rem;
   background: transparent;
   border: 1.5px solid var(--border-light);
   color: var(--text-muted);
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 0.85rem;
   font-weight: 600;
   text-decoration: none;
