@@ -77,10 +77,10 @@ LOGOS_TIENDAS = {
 
 # Columnas permitidas para ordenar (whitelist contra SQL injection)
 ORDEN_PERMITIDO = {
-    "precio_por_unidad": "pr.precio_por_unidad ASC",
+    "precio_por_unidad": "CASE WHEN pr.precio_por_unidad IS NULL THEN 1 ELSE 0 END, pr.precio_por_unidad ASC, pr.precio ASC",
     "precio": "pr.precio ASC",
-    "marca": "p.marca ASC, pr.precio_por_unidad ASC",
-    "tienda": "t.nombre ASC, pr.precio_por_unidad ASC",
+    "marca": "p.marca ASC, pr.precio ASC",
+    "tienda": "t.nombre ASC, pr.precio ASC",
 }
 
 
@@ -212,12 +212,11 @@ def obtener_opciones_filtros():
         return {"": {"marcas": [], "tallas_por_marca": {"": []}}}
 
     query = f"""
-        SELECT p.nombre, p.marca
+        SELECT p.nombre, p.marca, pr.precio_por_unidad
         FROM precios pr
         JOIN productos p ON p.id = pr.producto_id
         WHERE pr.fecha_scraping = ?
           AND pr.precio IS NOT NULL
-          AND pr.precio_por_unidad IS NOT NULL
           {query_excluir_no_panales()}
     """
     cursor.execute(query, [ultima_fecha])
@@ -238,6 +237,9 @@ def obtener_opciones_filtros():
         if not marca:
             continue
         categoria = detectar_categoria(nombre)
+        # Para categorías que no son fórmulas, exigir precio_por_unidad
+        if categoria != "Fórmulas Infantiles" and not row["precio_por_unidad"]:
+            continue
         talla = detectar_talla(nombre)
 
         if categoria not in datos:
@@ -338,7 +340,6 @@ def buscar_productos(marca=None, talla=None, tallas_edad=None,
         JOIN tiendas t ON t.id = pr.tienda_id
         WHERE pr.fecha_scraping = ?
           AND pr.precio IS NOT NULL
-          AND pr.precio_por_unidad IS NOT NULL
           {query_excluir_no_panales()}
     """
     params = [ultima_fecha]
@@ -398,6 +399,10 @@ def buscar_productos(marca=None, talla=None, tallas_edad=None,
             continue
 
         if categoria and producto["categoria"] != categoria:
+            continue
+
+        # Para categorías que no son fórmulas, exigir precio_por_unidad
+        if producto["categoria"] != "Fórmulas Infantiles" and not producto.get("precio_por_unidad"):
             continue
 
         resultados.append(producto)
