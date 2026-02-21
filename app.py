@@ -29,9 +29,19 @@ EXCLUIR_PATRONES = [
     "%Jabón%", "%Jabon%", "%Shampoo%", "%Acondicionador%",
     "%Crema%", "%Pantalla%", "%Protector solar%", "%Protector Mamario%",
     "%Aposito%", "%Apósito%", "%Colonia%", "%Mamadera%", "%Chupete%",
-    "%Calzon%", "%Calzón%", "%Pants%",
+    "%Calzon%", "%Calzón%",
     "%Toalla higiénica%", "%Toalla higienica%", "%Toalla Higiénica%",
+    "%Toallas Higiénicas%", "%Toallas Femeninas%", "%Toallas Incontinencia%",
     "%Kotex%", "%Nosotras%", "%Aiwina%", "%Familia & Salud%",
+    # Pañales de adulto
+    "%Adulto%", "%adulto%", "%Goodnites%", "%Tena %", "%Plenitud%",
+    "%Cotidian%", "%Proactive%", "%Emumed%", "%Emuprotect%",
+    # Productos no relacionados
+    "%Pediasure%", "%Nessucar%", "%Desodorante%", "%Enjuague Bucal%",
+    "%Pasta Dental%", "%Cepillo%", "%Bálsamo%", "%Bruma Facial%",
+    "%Set de Regalo%", "%Pétalos%", "%Mordedor%",
+    "%Cereal Infantil%", "%Colado%", "%Galleta%", "%Puré%", "%Pouch%",
+    "%Leche en Polvo Nido%", "%Nido 1+%", "%Nido 3+%",
 ]
 
 # Palabras clave para detectar panales de agua
