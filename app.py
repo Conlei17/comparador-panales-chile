@@ -392,7 +392,8 @@ def buscar_productos(marca=None, talla=None, tallas_edad=None,
             query += " AND p.nombre LIKE ?"
             params.append(f"%{palabra}%")
 
-    # Ordenamiento seguro (whitelist)
+    # Deduplicar (mismo producto + tienda) y ordenar
+    query += " GROUP BY p.id, t.id"
     orden_sql = ORDEN_PERMITIDO.get(orden, ORDEN_PERMITIDO["precio_por_unidad"])
     query += f" ORDER BY {orden_sql}"
 
