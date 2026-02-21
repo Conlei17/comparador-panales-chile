@@ -36,7 +36,7 @@
   <!-- Header -->
   <header class="header">
     <button class="dark-toggle" onclick="toggleDark()" title="Cambiar tema" id="darkToggle">&#9790;</button>
-    <h1>BabyAhorro</h1>
+    <img src="{{ url_for('static', filename='logo.png') }}" alt="BabyAhorro" class="header-logo">
     <p>Ahorro real para familias reales</p>
     <nav class="nav">
       <a href="/" class="nav-link">Comparar precios</a>
@@ -82,6 +82,13 @@
           <label for="talla">Talla</label>
           <select name="talla" id="talla">
             <option value="">Todas las tallas</option>
+          </select>
+        </div>
+
+        <div class="filtro-grupo" id="productoGrupo" style="display:none">
+          <label for="producto">Producto</label>
+          <select name="producto" id="producto">
+            <option value="">Todos los productos</option>
           </select>
         </div>
 
@@ -217,6 +224,8 @@
       var marcaSelect = document.getElementById('marca');
       var tallaSelect = document.getElementById('talla');
       var tallaGrupo = document.getElementById('tallaGrupo');
+      var productoSelect = document.getElementById('producto');
+      var productoGrupo = document.getElementById('productoGrupo');
 
       function repoblarSelect(select, valores, valorActual, textoDefault) {
         var prev = valorActual || select.value;
@@ -241,17 +250,28 @@
         }
       }
 
-      function actualizarCascada(mantenerMarca, mantenerTalla) {
+      function actualizarCascada(mantenerMarca, mantenerTalla, mantenerProducto) {
         var cat = categoriaSelect.value;
         var datos = opciones[cat] || opciones[''] || {marcas: [], tallas_por_marca: {}};
 
         repoblarSelect(marcaSelect, datos.marcas, mantenerMarca ? undefined : null, 'Todas las marcas');
 
-        if (cat === 'Toallitas Humedas' || cat === 'Fórmulas Infantiles') {
+        if (cat === 'Fórmulas Infantiles') {
           tallaGrupo.style.display = 'none';
           tallaSelect.value = '';
+          productoGrupo.style.display = '';
+          var marca = marcaSelect.value;
+          var productosDisponibles = (datos.productos_por_marca && datos.productos_por_marca[marca]) || datos.productos_por_marca[''] || [];
+          repoblarSelect(productoSelect, productosDisponibles, mantenerProducto ? undefined : null, 'Todos los productos');
+        } else if (cat === 'Toallitas Humedas') {
+          tallaGrupo.style.display = 'none';
+          tallaSelect.value = '';
+          productoGrupo.style.display = 'none';
+          productoSelect.value = '';
         } else {
           tallaGrupo.style.display = '';
+          productoGrupo.style.display = 'none';
+          productoSelect.value = '';
           var marca = marcaSelect.value;
           var tallasDisponibles = (datos.tallas_por_marca && datos.tallas_por_marca[marca]) || datos.tallas_por_marca[''] || [];
           repoblarSelect(tallaSelect, tallasDisponibles, mantenerTalla ? undefined : null, 'Todas las tallas');
@@ -259,15 +279,15 @@
       }
 
       categoriaSelect.addEventListener('change', function() {
-        actualizarCascada(false, false);
+        actualizarCascada(false, false, false);
       });
 
       marcaSelect.addEventListener('change', function() {
-        actualizarCascada(true, false);
+        actualizarCascada(true, false, false);
       });
 
       // Inicializar al cargar (respetar valores de URL)
-      actualizarCascada(true, true);
+      actualizarCascada(true, true, true);
     })();
   </script>
 

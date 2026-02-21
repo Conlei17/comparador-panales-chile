@@ -91,11 +91,17 @@ def conectar_db():
     return conn
 
 
+MARCA_ALIASES = {
+    "Nan Optipro": "Nan",
+}
+
+
 def normalizar_marca(marca):
-    """Normaliza 'PAMPERS' -> 'Pampers'."""
+    """Normaliza 'PAMPERS' -> 'Pampers' y unifica variantes como 'Nan Optipro' -> 'Nan'."""
     if not marca:
         return ""
-    return marca.strip().title()
+    norm = marca.strip().title()
+    return MARCA_ALIASES.get(norm, norm)
 
 
 def detectar_categoria(nombre):
@@ -231,6 +237,7 @@ def obtener_opciones_filtros():
 
     # Recopilar datos: categoria -> marca -> set de tallas
     datos = {}  # {categoria: {marca: set(tallas)}}
+    productos_formulas = {}  # {marca: set(nombres)}
     for row in rows:
         nombre = row["nombre"]
         marca = normalizar_marca(row["marca"])
@@ -249,6 +256,12 @@ def obtener_opciones_filtros():
         if talla:
             datos[categoria][marca].add(talla)
 
+        # Recopilar nombres de productos para Fórmulas Infantiles
+        if categoria == "Fórmulas Infantiles":
+            if marca not in productos_formulas:
+                productos_formulas[marca] = set()
+            productos_formulas[marca].add(nombre)
+
     opciones = {}
 
     # Por cada categoria
@@ -266,10 +279,22 @@ def obtener_opciones_filtros():
         if cat in ("Toallitas Humedas", "Fórmulas Infantiles"):
             tallas_por_marca = {}
 
-        opciones[cat] = {
+        cat_opciones = {
             "marcas": marcas_lista,
             "tallas_por_marca": tallas_por_marca,
         }
+
+        # Para Fórmulas Infantiles, agregar productos_por_marca
+        if cat == "Fórmulas Infantiles":
+            productos_por_marca = {}
+            todos_productos = set()
+            for m, nombres_set in productos_formulas.items():
+                productos_por_marca[m] = sorted(nombres_set)
+                todos_productos.update(nombres_set)
+            productos_por_marca[""] = sorted(todos_productos)
+            cat_opciones["productos_por_marca"] = productos_por_marca
+
+        opciones[cat] = cat_opciones
 
     # Entrada global (sin filtro de categoria, key = "")
     todas_marcas = set()
@@ -317,7 +342,7 @@ def obtener_precio_maximo():
 
 def buscar_productos(marca=None, talla=None, tallas_edad=None,
                      tiendas_sel=None, precio_max=None, busqueda=None,
-                     categoria=None, orden="precio_por_unidad"):
+                     categoria=None, producto_param=None, orden="precio_por_unidad"):
     """
     Busca productos con los filtros aplicados.
     Solo retorna precios de la ultima ejecucion del scraper.
@@ -399,6 +424,9 @@ def buscar_productos(marca=None, talla=None, tallas_edad=None,
             continue
 
         if categoria and producto["categoria"] != categoria:
+            continue
+
+        if producto_param and producto["nombre"] != producto_param:
             continue
 
         # Para categorías que no son fórmulas, exigir precio_por_unidad
@@ -527,6 +555,7 @@ def index():
     marca_sel = request.args.get("marca", "")
     talla_sel = request.args.get("talla", "")
     categoria_sel = request.args.get("categoria", "")
+    producto_sel = request.args.get("producto", "")
     tiendas_sel = request.args.getlist("tiendas")
     precio_max_str = request.args.get("precio_max", "")
     orden_actual = request.args.get("orden", "precio_por_unidad")
@@ -543,7 +572,7 @@ def index():
             pass
 
     # Determinar si hay algun filtro activo
-    hay_filtro = bool(marca_sel or talla_sel or categoria_sel or tiendas_sel or precio_max)
+    hay_filtro = bool(marca_sel or talla_sel or categoria_sel or producto_sel or tiendas_sel or precio_max)
 
     # Buscar productos
     productos = []
@@ -559,6 +588,7 @@ def index():
             tiendas_sel=tiendas_sel or None,
             precio_max=precio_max,
             categoria=categoria_sel or None,
+            producto_param=producto_sel or None,
             orden=orden_actual,
         )
         ahorro = calcular_ahorro(productos)
@@ -605,6 +635,7 @@ def index():
         marca_sel=marca_sel,
         talla_sel=talla_sel,
         categoria_sel=categoria_sel,
+        producto_sel=producto_sel,
         tiendas_sel=tiendas_sel,
         precio_max=precio_max,
         precio_max_global=precio_max_global,
@@ -636,9 +667,10 @@ def historico():
     categoria_sel = request.args.get("categoria", "")
     marca_sel = request.args.get("marca", "")
     talla_sel = request.args.get("talla", "")
+    producto_sel = request.args.get("producto", "")
     tienda_sel = request.args.get("tienda", "")
 
-    hay_filtro = bool(categoria_sel or marca_sel or talla_sel or tienda_sel)
+    hay_filtro = bool(categoria_sel or marca_sel or talla_sel or producto_sel or tienda_sel)
 
     # Buscar productos para el selector (usando selects en cascada)
     productos_lista = []
@@ -649,7 +681,6 @@ def historico():
             JOIN precios pr ON pr.producto_id = p.id
             JOIN tiendas t ON t.id = pr.tienda_id
             WHERE pr.precio IS NOT NULL
-              AND pr.precio_por_unidad IS NOT NULL
               {query_excluir_no_panales()}
         """
         params = []
@@ -675,6 +706,8 @@ def historico():
             if categoria_sel and row["categoria"] != categoria_sel:
                 continue
             if talla_sel and row["talla"] != talla_sel:
+                continue
+            if producto_sel and row["nombre"] != producto_sel:
                 continue
             productos_lista.append(row)
 
@@ -720,6 +753,7 @@ def historico():
         categoria_sel=categoria_sel,
         marca_sel=marca_sel,
         talla_sel=talla_sel,
+        producto_sel=producto_sel,
         tienda_sel=tienda_sel,
         hay_filtro=hay_filtro,
         productos_lista=productos_lista,
