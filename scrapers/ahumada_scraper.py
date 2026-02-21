@@ -27,7 +27,7 @@ CATEGORIAS = [
         "cgid": "infantil-y-maternidad-mundo-pa%C3%B1ales",
     },
     {
-        "url": "https://www.farmaciasahumada.cl/infantil-y-maternidad/lactancia-y-alimentacion/formulas-infantiles.html",
+        "url": "https://www.farmaciasahumada.cl/infantil-y-maternidad/lactancia-y-alimentacion/formulas-infantiles",
         "cgid": "infantil-y-maternidad-lactancia-y-alimentacion-formulas-infantiles",
     },
 ]
