@@ -45,7 +45,7 @@
   <header class="header">
     <button class="dark-toggle" onclick="toggleDark()" title="Cambiar tema" id="darkToggle">&#9790;</button>
     <img src="{{ url_for('static', filename='logo.png') }}" alt="BabyAhorro" class="header-logo">
-    <p>Ahorro real para familias reales</p>
+    <p class="header-tagline">Ahorro real para familias reales</p>
     <nav class="nav">
       <a href="/" class="nav-link nav-link--active">Comparar precios</a>
       <a href="/historico" class="nav-link">Hist&oacute;rico</a>
@@ -254,6 +254,16 @@
       <!-- Tabla (desktop) -->
       <div class="tabla-wrapper">
         <table>
+          <colgroup>
+            <col class="col-w-check">
+            <col class="col-w-tienda">
+            <col class="col-w-img">
+            <col class="col-w-nombre">
+            <col class="col-w-precio">
+            <col class="col-w-cantidad">
+            <col class="col-w-ppu">
+            <col class="col-w-ver">
+          </colgroup>
           <thead>
             <tr>
               <th class="col-comparar"></th>
@@ -301,7 +311,7 @@
                   <img src="{{ p.imagen_url }}" alt="{{ p.nombre }}" class="producto-thumb" loading="lazy">
                 {% endif %}
               </td>
-              <td>
+              <td class="col-nombre" title="{{ p.nombre }}">
                 {{ p.nombre }}
                 {% if loop.first %}
                   <span class="badge-mejor">Mejor precio</span>

@@ -137,9 +137,14 @@ h1, h2, h3, .badge-mejor, .badge-descuento, .top-tallas-titulo, .ahorro-header {
   margin-bottom: 0.25rem;
 }
 
-.header p {
-  color: rgba(255, 255, 255, 0.9);
-  font-size: 0.9rem;
+.header-tagline {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin-top: 0.15rem;
+  font-family: 'Inter', sans-serif;
 }
 
 /* --- Dark mode toggle --- */
@@ -167,7 +172,7 @@ h1, h2, h3, .badge-mejor, .badge-descuento, .top-tallas-titulo, .ahorro-header {
 
 /* --- Contenedor principal --- */
 .container {
-  max-width: 900px;
+  max-width: 960px;
   margin: 0 auto;
   padding: 1rem;
 }
@@ -291,8 +296,7 @@ body.dark .filtro-grupo select.filtro-activo {
 
 /* --- Tabla de resultados (desktop) --- */
 .tabla-wrapper {
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
+  overflow-x: hidden;
 }
 
 table {
@@ -302,22 +306,35 @@ table {
   border-radius: 16px;
   overflow: hidden;
   box-shadow: 0 4px 16px var(--shadow);
-  font-size: 0.9rem;
+  font-size: 0.85rem;
+  table-layout: fixed;
 }
+
+/* Column widths for fixed table layout */
+table col.col-w-check { width: 32px; }
+table col.col-w-tienda { width: 110px; }
+table col.col-w-img { width: 56px; }
+table col.col-w-nombre { width: auto; }
+table col.col-w-precio { width: 100px; }
+table col.col-w-cantidad { width: 70px; }
+table col.col-w-ppu { width: 95px; }
+table col.col-w-ver { width: 90px; }
 
 thead {
   background: linear-gradient(135deg, var(--gradient-thead-start), var(--gradient-thead-end));
 }
 
 thead th {
-  padding: 0.75rem 0.6rem;
+  padding: 0.6rem 0.5rem;
   text-align: left;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
   color: var(--text-muted);
   font-weight: 700;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 tbody tr {
@@ -330,14 +347,22 @@ tbody tr:hover {
 }
 
 tbody td {
-  padding: 0.7rem 0.6rem;
+  padding: 0.5rem 0.5rem;
   vertical-align: middle;
+}
+
+/* Columna nombre truncada */
+.col-nombre {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 0;
 }
 
 /* Columna precio por unidad destacada */
 .col-ppu {
   font-weight: 700;
-  font-size: 1.05rem;
+  font-size: 1rem;
   color: var(--ppu-color);
 }
 
@@ -348,6 +373,8 @@ tbody td {
 .col-tienda {
   font-weight: 600;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* --- Badge mejor precio --- */
@@ -965,8 +992,8 @@ body.dark .checkbox-label input[type="checkbox"]:checked + .chip {
 
 /* --- Product thumbnails --- */
 .producto-thumb {
-  width: 50px;
-  height: 50px;
+  width: 44px;
+  height: 44px;
   object-fit: contain;
   border-radius: 6px;
   background: var(--bg-input);
