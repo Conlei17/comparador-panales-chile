@@ -50,6 +50,21 @@ TIMEOUT = 20
 # Pausa entre peticiones para no sobrecargar el servidor (en segundos)
 PAUSA_ENTRE_PAGINAS = 3
 
+# Allowlist: un producto debe contener al menos una de estas palabras para ser valido
+PALABRAS_PRODUCTO_VALIDO = [
+    "pañal", "panal", "toalla", "toallita",
+    "huggies", "pampers", "babysec", "cotidian",
+    "leche", "fórmula", "formula", "nan ", "similac",
+    "enfamil", "s-26", "purita", "nido",
+    "splasher", "goodnites", "emubaby",
+]
+
+
+def es_producto_relevante(nombre):
+    """Verifica que el producto sea relevante (panales, toallitas, formulas)."""
+    nombre_lower = nombre.lower()
+    return any(kw in nombre_lower for kw in PALABRAS_PRODUCTO_VALIDO)
+
 
 def obtener_pagina(url):
     """
@@ -375,6 +390,9 @@ def extraer_productos_de_json(data):
         if precio_lista and precio and precio_lista <= precio:
             precio_lista = None
 
+        if not es_producto_relevante(nombre):
+            continue
+
         producto = {
             "nombre": nombre,
             "precio": precio,
@@ -449,6 +467,9 @@ def extraer_productos_de_html(soup):
             img_elem = contenedor.select_one("img")
             if img_elem:
                 imagen = img_elem.get("src") or img_elem.get("data-src") or ""
+
+            if not es_producto_relevante(nombre):
+                continue
 
             producto = {
                 "nombre": nombre,

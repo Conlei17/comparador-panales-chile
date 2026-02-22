@@ -24,24 +24,13 @@ ARCHIVO_DB = os.path.join(DIR_PROYECTO, "data", "precios.db")
 
 app = Flask(__name__)
 
-# Productos que NO son panales ni toallitas de bebe (para excluir de resultados)
-EXCLUIR_PATRONES = [
-    "%Jabón%", "%Jabon%", "%Shampoo%", "%Acondicionador%",
-    "%Crema%", "%Pantalla%", "%Protector solar%", "%Protector Mamario%",
-    "%Aposito%", "%Apósito%", "%Colonia%", "%Mamadera%", "%Chupete%",
-    "%Calzon%", "%Calzón%",
-    "%Toalla higiénica%", "%Toalla higienica%", "%Toalla Higiénica%",
-    "%Toallas Higiénicas%", "%Toallas Femeninas%", "%Toallas Incontinencia%",
-    "%Kotex%", "%Nosotras%", "%Aiwina%", "%Familia & Salud%",
-    # Pañales de adulto
-    "%Adulto%", "%adulto%", "%Goodnites%", "%Tena %", "%Plenitud%",
-    "%Cotidian%", "%Proactive%", "%Emumed%", "%Emuprotect%",
-    # Productos no relacionados
-    "%Pediasure%", "%Nessucar%", "%Desodorante%", "%Enjuague Bucal%",
-    "%Pasta Dental%", "%Cepillo%", "%Bálsamo%", "%Bruma Facial%",
-    "%Set de Regalo%", "%Pétalos%", "%Mordedor%",
-    "%Cereal Infantil%", "%Colado%", "%Galleta%", "%Puré%", "%Pouch%",
-    "%Leche en Polvo Nido%", "%Nido 1+%", "%Nido 3+%",
+# Allowlist: productos validos deben contener al menos una de estas palabras
+INCLUIR_PATRONES = [
+    "%pañal%", "%panal%", "%toalla%", "%toallita%",
+    "%huggies%", "%pampers%", "%babysec%", "%cotidian%",
+    "%leche%", "%fórmula%", "%formula%", "%nan %", "%similac%",
+    "%enfamil%", "%s-26%", "%purita%", "%nido%",
+    "%splasher%", "%goodnites%", "%emubaby%",
 ]
 
 # Palabras clave para detectar panales de agua
@@ -159,9 +148,9 @@ def detectar_talla(nombre):
 
 
 def query_excluir_no_panales():
-    """Retorna clausulas SQL para excluir productos que no son panales."""
-    clausulas = " AND ".join(f"p.nombre NOT LIKE '{pat}'" for pat in EXCLUIR_PATRONES)
-    return f"AND {clausulas}"
+    """Retorna clausula SQL allowlist: solo productos que matchean palabras validas."""
+    clausulas = " OR ".join(f"LOWER(p.nombre) LIKE '{pat}'" for pat in INCLUIR_PATRONES)
+    return f"AND ({clausulas})"
 
 
 def obtener_marcas():
