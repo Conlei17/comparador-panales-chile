@@ -29,10 +29,18 @@ PRODUCTOS_POR_PAGINA = 24
 
 # Queries de busqueda por categoria
 QUERIES = [
-    "panales",
-    "toallitas humedas bebe",
-    "formula infantil",
-    "formula lactea",
+    {"q": "pañales", "refine": "c_Genero=Infantil"},
+    {"q": "pampers"},
+    {"q": "babysec"},
+    {"q": "toallitas humedas bebe"},
+    {"q": "formula infantil"},
+    {"q": "formula lactea"},
+]
+
+# Palabras clave para filtrar productos de adulto que se cuelan
+EXCLUIR_ADULTO = [
+    "adulto", "adultos", "incontinencia", "plenitud",
+    "cotidian", "tena ", "sabanilla",
 ]
 
 # Carpeta donde se guardara el CSV con los resultados
@@ -72,7 +80,7 @@ MARCAS_CONOCIDAS = [
 ]
 
 
-def buscar_productos_api(query, count=PRODUCTOS_POR_PAGINA, start=0):
+def buscar_productos_api(query, count=PRODUCTOS_POR_PAGINA, start=0, refine=None):
     """
     Realiza una busqueda en la API OCAPI de Cruz Verde.
 
@@ -80,6 +88,7 @@ def buscar_productos_api(query, count=PRODUCTOS_POR_PAGINA, start=0):
         query: termino de busqueda
         count: cantidad de resultados por pagina
         start: offset de inicio
+        refine: filtro de refinamiento (ej: "c_Genero=Infantil")
 
     Retorna:
         dict con la respuesta JSON o None si hubo error.
@@ -91,9 +100,11 @@ def buscar_productos_api(query, count=PRODUCTOS_POR_PAGINA, start=0):
         "count": count,
         "start": start,
     }
+    if refine:
+        params["refine"] = refine
 
     try:
-        print(f"  API: q={query}, start={start}, count={count}")
+        print(f"  API: q={query}, start={start}, count={count}" + (f", refine={refine}" if refine else ""))
         respuesta = requests.get(API_URL, params=params, headers=HEADERS, timeout=TIMEOUT)
         respuesta.raise_for_status()
         return respuesta.json()
@@ -158,6 +169,11 @@ def procesar_hit(hit):
     try:
         nombre = hit.get("product_name", "")
         if not nombre or len(nombre) < 3:
+            return None
+
+        # Filtrar productos de adulto que no corresponden
+        nombre_lower = nombre.lower()
+        if any(palabra in nombre_lower for palabra in EXCLUIR_ADULTO):
             return None
 
         product_id = hit.get("product_id", "")
@@ -271,14 +287,16 @@ def main():
     todos_los_productos = []
     product_ids_vistos = set()
 
-    for idx_query, query in enumerate(QUERIES, 1):
-        print(f"\n[Query {idx_query}/{len(QUERIES)}] q={query}")
+    for idx_query, query_config in enumerate(QUERIES, 1):
+        query = query_config["q"]
+        refine = query_config.get("refine")
+        print(f"\n[Query {idx_query}/{len(QUERIES)}] q={query}" + (f" refine={refine}" if refine else ""))
         print("-" * 60)
 
         start = 0
 
         while True:
-            data = buscar_productos_api(query, count=PRODUCTOS_POR_PAGINA, start=start)
+            data = buscar_productos_api(query, count=PRODUCTOS_POR_PAGINA, start=start, refine=refine)
             if not data:
                 print("  No se pudo obtener datos. Saltando.")
                 break

@@ -136,13 +136,15 @@ def buscar_productos_en_json(data):
     dehydrated = data.get("dehydratedState", {})
     queries = dehydrated.get("queries", [])
 
-    # Palabras clave especificas para la categoria de panales
+    # Palabras clave para identificar categorias relevantes
     # (evita falsos positivos con "bebé" que matchea cremas, shampoos, etc.)
-    palabras_panales_exactas = ("pañal", "panal")
-    palabras_panales_amplias = ("toallas húmedas", "toallas humedas")
+    palabras_relevantes = (
+        "pañal", "panal",
+        "toallas húmedas", "toallas humedas",
+        "leche", "fórmula", "formula", "suplemento",
+    )
 
     mejor_lista = []
-    mejor_lista_panales = []
 
     for query in queries:
         if not isinstance(query, dict):
@@ -159,22 +161,14 @@ def buscar_productos_en_json(data):
         if not isinstance(products[0], dict):
             continue
 
-        # Verificar si esta query es de la categoria de panales
+        # Verificar si esta query es de una categoria relevante
         cat_names = products[0].get("categoryNames", [])
         cats_lower = " ".join(cat_names).lower()
-        es_panales = (
-            any(p in cats_lower for p in palabras_panales_exactas)
-            or any(p in cats_lower for p in palabras_panales_amplias)
-        )
+        es_relevante = any(p in cats_lower for p in palabras_relevantes)
 
-        if es_panales and len(products) > len(mejor_lista_panales):
-            mejor_lista_panales = products
-        elif len(products) > len(mejor_lista):
+        if es_relevante and len(products) > len(mejor_lista):
             mejor_lista = products
 
-    # Preferir la lista de panales; si no hay, usar la mas grande
-    if mejor_lista_panales:
-        return mejor_lista_panales
     if mejor_lista:
         return mejor_lista
 
