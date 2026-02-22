@@ -130,8 +130,12 @@ def extraer_cantidad(nombre_producto):
     """
     patrones = [
         r"(\d+)\s*(?:pa[ñn]ales)\b",
+        r"(\d+)\s*(?:toallitas|toallas)\b",
         r"(\d+)\s*(?:unidades|unid|und)\b",
+        r"(\d+)\s*(?:hojas)\b",
         r"x\s*(\d+)\s*(?:un|u)\b",
+        r"[xX](\d+)\b",
+        r"(\d+)\s*[uU]\b",
         r"(\d+)\s*(?:un)\b",
     ]
     for patron in patrones:
