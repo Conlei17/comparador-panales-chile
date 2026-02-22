@@ -24,6 +24,7 @@ from bs4 import BeautifulSoup
 # URLs de categorias a scrapear
 URLS_CATEGORIAS = [
     "https://www.jumbo.cl/mi-bebe/panales-y-toallas-humedas/panales",
+    "https://www.jumbo.cl/mi-bebe/panales-y-toallas-humedas/toallas-humedas",
     "https://www.jumbo.cl/mi-bebe/leche-y-suplementos-infantiles",
 ]
 

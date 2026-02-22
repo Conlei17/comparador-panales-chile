@@ -31,6 +31,10 @@ CATEGORIAS = [
         "nombre": "Pañales",
         "url": "https://www.lapanalera.cl/panales",
     },
+    {
+        "nombre": "Toallas Húmedas",
+        "url": "https://www.lapanalera.cl/bebe/toallas-humedas",
+    },
 ]
 
 CARPETA_DATOS = os.path.join(os.path.dirname(__file__), "..", "data")

@@ -19,7 +19,10 @@ from bs4 import BeautifulSoup
 # --- CONFIGURACION ---
 
 # URL base de la coleccion de panales
-URL_BASE = "https://www.liquimax.cl/collections/panales"
+URLS_CATEGORIAS = [
+    "https://www.liquimax.cl/collections/panales",
+    "https://www.liquimax.cl/collections/toallitas-humedas",
+]
 
 # Carpeta donde se guardara el CSV con los resultados
 CARPETA_DATOS = os.path.join(os.path.dirname(__file__), "..", "data")
@@ -358,50 +361,52 @@ def main():
     print("SCRAPER LIQUIMAX - Comparador de Panales Chile")
     print("=" * 60)
     print(f"Inicio: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print(f"URL: {URL_BASE}")
+    print(f"Categorias: {len(URLS_CATEGORIAS)}")
     print()
 
-    # Paso 1: Descargar la primera pagina
-    print("[1/3] Descargando primera pagina para detectar paginacion...")
-    soup_primera = obtener_pagina(URL_BASE)
-
-    if not soup_primera:
-        print("ERROR FATAL: No se pudo descargar la pagina principal. Abortando.")
-        return
-
-    # Paso 2: Detectar cuantas paginas hay
-    total_paginas = detectar_total_paginas(soup_primera)
-    print(f"  Paginas detectadas: {total_paginas}")
-    print()
-
-    # Paso 3: Extraer productos de todas las paginas
-    print("[2/3] Extrayendo productos de todas las paginas...")
     todos_los_productos = []
 
-    for num_pagina in range(1, total_paginas + 1):
-        print(f"\n--- Pagina {num_pagina} de {total_paginas} ---")
+    for idx_cat, url_base in enumerate(URLS_CATEGORIAS, 1):
+        print(f"\n[Categoria {idx_cat}/{len(URLS_CATEGORIAS)}] {url_base}")
+        print("-" * 60)
 
-        if num_pagina == 1:
-            # Ya tenemos la primera pagina descargada
-            soup = soup_primera
-        else:
-            # Descargamos las paginas siguientes
-            url_pagina = f"{URL_BASE}/{num_pagina}"
-            soup = obtener_pagina(url_pagina)
+        # Paso 1: Descargar la primera pagina
+        print("  Descargando primera pagina para detectar paginacion...")
+        soup_primera = obtener_pagina(url_base)
 
-            if not soup:
-                print(f"  No se pudo descargar la pagina {num_pagina}. Continuando...")
-                continue
+        if not soup_primera:
+            print(f"  ERROR: No se pudo descargar {url_base}. Saltando categoria.")
+            continue
 
-        # Extraemos los productos de esta pagina
-        productos_pagina = extraer_productos(soup)
-        print(f"  Productos encontrados en esta pagina: {len(productos_pagina)}")
+        # Paso 2: Detectar cuantas paginas hay
+        total_paginas = detectar_total_paginas(soup_primera)
+        print(f"  Paginas detectadas: {total_paginas}")
 
-        todos_los_productos.extend(productos_pagina)
+        # Paso 3: Extraer productos de todas las paginas
+        for num_pagina in range(1, total_paginas + 1):
+            print(f"\n  --- Pagina {num_pagina} de {total_paginas} ---")
 
-        # Esperamos un poco antes de la siguiente peticion (buena practica)
-        if num_pagina < total_paginas:
-            print(f"  Esperando {PAUSA_ENTRE_PAGINAS}s antes de la siguiente pagina...")
+            if num_pagina == 1:
+                soup = soup_primera
+            else:
+                url_pagina = f"{url_base}/{num_pagina}"
+                soup = obtener_pagina(url_pagina)
+
+                if not soup:
+                    print(f"  No se pudo descargar la pagina {num_pagina}. Continuando...")
+                    continue
+
+            productos_pagina = extraer_productos(soup)
+            print(f"  Productos encontrados en esta pagina: {len(productos_pagina)}")
+
+            todos_los_productos.extend(productos_pagina)
+
+            if num_pagina < total_paginas:
+                print(f"  Esperando {PAUSA_ENTRE_PAGINAS}s antes de la siguiente pagina...")
+                time.sleep(PAUSA_ENTRE_PAGINAS)
+
+        # Pausa entre categorias
+        if idx_cat < len(URLS_CATEGORIAS):
             time.sleep(PAUSA_ENTRE_PAGINAS)
 
     print(f"\n  Total de productos extraidos: {len(todos_los_productos)}")

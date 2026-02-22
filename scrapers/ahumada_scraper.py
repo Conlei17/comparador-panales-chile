@@ -30,6 +30,10 @@ CATEGORIAS = [
         "url": "https://www.farmaciasahumada.cl/infantil-y-maternidad/lactancia-y-alimentacion/formulas-infantiles",
         "cgid": "infantil-y-maternidad-lactancia-y-alimentacion-formulas-infantiles",
     },
+    {
+        "url": "https://www.farmaciasahumada.cl/infantil-y-maternidad/higiene-infantil/toallas-h%C3%BAmedas",
+        "cgid": "infantil-y-maternidad-higiene-infantil-toallas-humedas",
+    },
 ]
 
 # URL de la API de paginacion (Demandware Search-UpdateGrid)

@@ -34,6 +34,10 @@ CATEGORIAS = [
         "nombre": "Calzones Pants",
         "url": "https://www.panalestintin.cl/categoria-producto/bebes-y-ninos/calzones-pants/",
     },
+    {
+        "nombre": "Toallas Húmedas",
+        "url": "https://www.panalestintin.cl/categoria-producto/bebes-y-ninos/toallas-humedas/",
+    },
 ]
 
 CARPETA_DATOS = os.path.join(os.path.dirname(__file__), "..", "data")
