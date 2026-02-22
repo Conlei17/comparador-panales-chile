@@ -83,6 +83,7 @@ LOGOS_TIENDAS = {
     "Santa Isabel": "santaisabel.png",
     "Jumbo": "jumbo.png",
     "Farmacias Ahumada": "ahumada.png",
+    "Cruz Verde": "cruzverde.png",
 }
 
 # Columnas permitidas para ordenar (whitelist contra SQL injection)
