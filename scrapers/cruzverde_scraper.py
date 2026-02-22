@@ -12,6 +12,7 @@ import csv
 import os
 import re
 import time
+import unicodedata
 from datetime import datetime
 
 import requests
@@ -206,8 +207,14 @@ def procesar_hit(hit):
         if image:
             imagen = image.get("dis_base_link") or image.get("link")
 
-        # URL del producto
-        url = f"{URL_BASE_PRODUCTO}/{product_id}.html" if product_id else ""
+        # URL del producto (formato: /slug-del-nombre/ID.html)
+        if product_id:
+            slug = unicodedata.normalize("NFD", nombre)
+            slug = slug.encode("ascii", "ignore").decode("ascii")
+            slug = re.sub(r"[^a-z0-9]+", "-", slug.lower()).strip("-")
+            url = f"{URL_BASE_PRODUCTO}/{slug}/{product_id}.html"
+        else:
+            url = ""
 
         # Marca y cantidad
         marca = extraer_marca(nombre)
