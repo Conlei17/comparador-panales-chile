@@ -107,9 +107,28 @@
 
         <div class="filtro-botones">
           <button type="submit" class="btn-buscar">Buscar</button>
-          {% if hay_filtro %}
-            <a href="/" class="btn-limpiar">Limpiar</a>
-          {% endif %}
+          <a href="/" class="btn-limpiar {{ '' if hay_filtro else 'btn-limpiar--disabled' }}">Limpiar</a>
+        </div>
+      </div>
+
+      <!-- Tiendas (chips visibles) -->
+      <div class="filtro-tiendas-section">
+        <div class="filtro-tiendas-header">
+          <label>Tiendas</label>
+          <div class="tiendas-quick-links">
+            <a onclick="seleccionarTiendas(true)">Todas</a>
+            <span class="tiendas-sep">|</span>
+            <a onclick="seleccionarTiendas(false)">Ninguna</a>
+          </div>
+        </div>
+        <div class="checkbox-grupo" id="tiendasGrupo">
+          {% for tienda in tiendas %}
+          <label class="checkbox-label">
+            <input type="checkbox" name="tiendas" value="{{ tienda }}"
+                   {% if tienda in tiendas_sel or not tiendas_sel %}checked{% endif %}>
+            <span class="chip">{{ tienda }}</span>
+          </label>
+          {% endfor %}
         </div>
       </div>
 
@@ -137,20 +156,6 @@
             <div class="slider-rango">
               <span>$1.000</span>
               <span>${{ "{:,}".format(precio_max_global).replace(",", ".") }}</span>
-            </div>
-          </div>
-
-          <!-- Tiendas -->
-          <div class="filtro-tiendas">
-            <label>Tiendas</label>
-            <div class="checkbox-grupo">
-              {% for tienda in tiendas %}
-              <label class="checkbox-label">
-                <input type="checkbox" name="tiendas" value="{{ tienda }}"
-                       {% if tienda in tiendas_sel or not tiendas_sel %}checked{% endif %}>
-                <span>{{ tienda }}</span>
-              </label>
-              {% endfor %}
             </div>
           </div>
 
@@ -420,6 +425,28 @@
       var formatted = parseInt(valor).toLocaleString('es-CL');
       label.textContent = '$' + formatted.replace(/,/g, '.');
     }
+
+    // --- Todas / Ninguna tiendas ---
+    function seleccionarTiendas(marcar) {
+      var checkboxes = document.querySelectorAll('#tiendasGrupo input[type="checkbox"]');
+      checkboxes.forEach(function(cb) { cb.checked = marcar; });
+    }
+
+    // --- Highlight selects activos ---
+    (function() {
+      var selects = document.querySelectorAll('.filtro-grupo select');
+      function actualizarEstado(sel) {
+        if (sel.value !== '') {
+          sel.classList.add('filtro-activo');
+        } else {
+          sel.classList.remove('filtro-activo');
+        }
+      }
+      selects.forEach(function(sel) {
+        actualizarEstado(sel);
+        sel.addEventListener('change', function() { actualizarEstado(sel); });
+      });
+    })();
 
     function toggleDark() {
       document.body.classList.toggle('dark');

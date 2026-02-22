@@ -202,7 +202,7 @@ h1, h2, h3, .badge-mejor, .badge-descuento, .top-tallas-titulo, .ahorro-header {
 .filtro-grupo label {
   display: block;
   font-size: 0.8rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   margin-bottom: 0.3rem;
   font-weight: 600;
   text-transform: uppercase;
@@ -212,7 +212,7 @@ h1, h2, h3, .badge-mejor, .badge-descuento, .top-tallas-titulo, .ahorro-header {
 .filtro-grupo select {
   width: 100%;
   padding: 0.6rem 0.75rem;
-  border: 2px solid var(--border-light);
+  border: 2px solid var(--text-lighter);
   border-radius: 10px;
   font-size: 1rem;
   color: var(--text-primary);
@@ -222,12 +222,23 @@ h1, h2, h3, .badge-mejor, .badge-descuento, .top-tallas-titulo, .ahorro-header {
   background-repeat: no-repeat;
   background-position: right 0.75rem center;
   cursor: pointer;
-  transition: border-color 0.2s;
+  transition: border-color 0.2s, background-color 0.2s, box-shadow 0.2s;
 }
 
 .filtro-grupo select:focus {
   outline: none;
   border-color: var(--accent-pink);
+}
+
+.filtro-grupo select.filtro-activo {
+  border-color: var(--accent-pink);
+  background-color: rgba(232, 168, 152, 0.08);
+  box-shadow: 0 0 0 1px rgba(232, 168, 152, 0.15);
+}
+
+body.dark .filtro-grupo select.filtro-activo {
+  background-color: rgba(212, 160, 144, 0.1);
+  box-shadow: 0 0 0 1px rgba(212, 160, 144, 0.15);
 }
 
 .btn-buscar {
@@ -580,17 +591,55 @@ tbody td {
   margin-top: 0.2rem;
 }
 
-/* --- Checkboxes de tiendas --- */
-.filtro-tiendas label:first-child {
-  display: block;
+/* --- Tiendas: section visible fuera de avanzados --- */
+.filtro-tiendas-section {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border-lighter);
+}
+
+.filtro-tiendas-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.filtro-tiendas-header > label {
   font-size: 0.8rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  margin-bottom: 0.4rem;
 }
 
+.tiendas-quick-links {
+  display: flex;
+  gap: 0.1rem;
+  align-items: center;
+  font-size: 0.75rem;
+}
+
+.tiendas-quick-links a {
+  color: var(--accent-pink);
+  text-decoration: none;
+  cursor: pointer;
+  font-weight: 600;
+  padding: 0.1rem 0.3rem;
+  border-radius: 4px;
+  transition: background 0.15s;
+}
+
+.tiendas-quick-links a:hover {
+  background: rgba(232, 168, 152, 0.12);
+}
+
+.tiendas-quick-links .tiendas-sep {
+  color: var(--text-lighter);
+  user-select: none;
+}
+
+/* --- Chips de tiendas --- */
 .checkbox-grupo {
   display: flex;
   flex-wrap: wrap;
@@ -598,17 +647,39 @@ tbody td {
 }
 
 .checkbox-label {
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
-  font-size: 0.9rem;
-  color: var(--text-secondary);
   cursor: pointer;
 }
 
 .checkbox-label input[type="checkbox"] {
-  accent-color: var(--accent-pink);
-  cursor: pointer;
+  display: none;
+}
+
+.checkbox-label .chip {
+  display: inline-block;
+  padding: 0.35rem 0.85rem;
+  border: 1.5px solid var(--border-light);
+  border-radius: 20px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  background: transparent;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+  user-select: none;
+}
+
+.checkbox-label input[type="checkbox"]:checked + .chip {
+  background: rgba(232, 168, 152, 0.15);
+  border-color: var(--accent-pink);
+  color: var(--accent-pink);
+}
+
+body.dark .checkbox-label input[type="checkbox"]:checked + .chip {
+  background: rgba(212, 160, 144, 0.15);
+  border-color: var(--accent-pink);
+  color: var(--accent-pink);
+}
+
+.checkbox-label .chip:hover {
+  border-color: var(--accent-pink);
 }
 
 /* --- Seccion de ahorro --- */
@@ -1199,6 +1270,14 @@ tbody td {
   border-color: var(--worst-red);
   color: var(--worst-red);
   background: var(--worst-bg);
+}
+
+.btn-limpiar.btn-limpiar--disabled {
+  color: var(--text-lighter);
+  border-color: var(--border-lighter);
+  cursor: default;
+  pointer-events: none;
+  opacity: 0.6;
 }
 
 /* --- Busquedas recientes --- */
