@@ -27,10 +27,17 @@ app = Flask(__name__)
 # Allowlist: productos validos deben contener al menos una de estas palabras
 INCLUIR_PATRONES = [
     "%pañal%", "%panal%", "%toalla%", "%toallita%",
-    "%huggies%", "%pampers%", "%babysec%", "%cotidian%",
+    "%huggies%", "%pampers%", "%babysec%",
     "%leche%", "%fórmula%", "%formula%", "%nan %", "%similac%",
     "%enfamil%", "%s-26%", "%purita%", "%nido%",
     "%splasher%", "%goodnites%", "%emubaby%",
+]
+
+# Excluir productos de adulto (incontinencia, pañales adulto, etc.)
+EXCLUIR_ADULTO = [
+    "%adulto%", "%incontinencia%", "%plenitud%", "%tena %",
+    "%cotidian%", "%ladysoft%", "%emumed%", "%emuprotect%",
+    "%proactive%", "% win %", "%win plus%", "%win premium%",
 ]
 
 # Palabras clave para detectar panales de agua
@@ -148,9 +155,10 @@ def detectar_talla(nombre):
 
 
 def query_excluir_no_panales():
-    """Retorna clausula SQL allowlist: solo productos que matchean palabras validas."""
-    clausulas = " OR ".join(f"LOWER(p.nombre) LIKE '{pat}'" for pat in INCLUIR_PATRONES)
-    return f"AND ({clausulas})"
+    """Retorna clausula SQL allowlist + exclusion de productos de adulto."""
+    incluir = " OR ".join(f"LOWER(p.nombre) LIKE '{pat}'" for pat in INCLUIR_PATRONES)
+    excluir = " AND ".join(f"LOWER(p.nombre) NOT LIKE '{pat}'" for pat in EXCLUIR_ADULTO)
+    return f"AND ({incluir}) AND {excluir}"
 
 
 def obtener_marcas():

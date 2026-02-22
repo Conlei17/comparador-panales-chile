@@ -53,7 +53,7 @@ PAUSA_ENTRE_PAGINAS = 3
 # Allowlist: un producto debe contener al menos una de estas palabras para ser valido
 PALABRAS_PRODUCTO_VALIDO = [
     "pañal", "panal", "toalla", "toallita",
-    "huggies", "pampers", "babysec", "cotidian",
+    "huggies", "pampers", "babysec",
     "leche", "fórmula", "formula", "nan ", "similac",
     "enfamil", "s-26", "purita", "nido",
     "splasher", "goodnites", "emubaby",

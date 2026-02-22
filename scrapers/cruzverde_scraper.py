@@ -126,10 +126,23 @@ def buscar_productos_api(query, count=PRODUCTOS_POR_PAGINA, start=0, refine=None
 def extraer_marca(nombre_producto):
     """
     Intenta detectar la marca del producto a partir de su nombre.
+    Usa marcas conocidas, luego sublíneas de producto, luego primera palabra.
     """
     nombre_lower = nombre_producto.lower()
     for marca in MARCAS_CONOCIDAS:
         if marca.lower() in nombre_lower:
+            return marca
+
+    # Sublíneas que identifican marca cuando el nombre no contiene la marca directa
+    SUBLINEAS_MARCA = [
+        ("premium care", "Pampers"),
+        ("confort sec", "Pampers"),
+        ("super premium", "Babysec"),
+        ("premium", "Babysec"),
+        ("ultrasuave", "Emubaby"),
+    ]
+    for sublinea, marca in SUBLINEAS_MARCA:
+        if sublinea in nombre_lower:
             return marca
 
     primera_palabra = nombre_producto.split()[0] if nombre_producto.split() else "Desconocida"
