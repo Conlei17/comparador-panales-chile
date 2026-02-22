@@ -634,6 +634,10 @@ tbody td {
   background: rgba(232, 168, 152, 0.12);
 }
 
+body.dark .tiendas-quick-links a:hover {
+  background: rgba(212, 160, 144, 0.18);
+}
+
 .tiendas-quick-links .tiendas-sep {
   color: var(--text-lighter);
   user-select: none;
