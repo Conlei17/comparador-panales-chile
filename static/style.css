@@ -317,7 +317,7 @@ table col.col-w-check { width: 32px; }
 table col.col-w-tienda { width: 110px; }
 table col.col-w-img { width: 56px; }
 table col.col-w-nombre { width: auto; }
-table col.col-w-precio { width: 100px; }
+table col.col-w-precio { width: 130px; }
 table col.col-w-cantidad { width: 70px; }
 table col.col-w-ppu { width: 95px; }
 table col.col-w-ver { width: 90px; }
@@ -369,7 +369,6 @@ tbody td {
 }
 
 .col-precio {
-  white-space: nowrap;
 }
 
 .col-tienda {
@@ -1014,10 +1013,10 @@ body.dark .checkbox-label input[type="checkbox"]:checked + .chip {
 
 /* --- Discount indicator --- */
 .precio-lista {
+  display: block;
   text-decoration: line-through;
   color: var(--precio-lista-color);
   font-size: 0.8rem;
-  margin-right: 0.3rem;
 }
 
 .badge-descuento {
@@ -1028,8 +1027,9 @@ body.dark .checkbox-label input[type="checkbox"]:checked + .chip {
   font-weight: 700;
   padding: 0.15rem 0.4rem;
   border-radius: 20px;
-  margin-left: 0.3rem;
+  margin-left: 0.2rem;
   white-space: nowrap;
+  vertical-align: middle;
 }
 
 /* --- Filtro edad: select deshabilitado --- */

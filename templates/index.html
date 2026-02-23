@@ -7,6 +7,8 @@
   <meta name="description" content="{{ meta_descripcion }}">
   <link rel="canonical" href="{{ canonical_url }}">
   <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon-32x32.png') }}">
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+  <meta name="theme-color" content="#f4b8a8">
 
   <!-- Open Graph: preview al compartir por WhatsApp, redes sociales, etc -->
   <meta property="og:type" content="website">
@@ -236,7 +238,8 @@
         <div class="top-tallas-scroll">
           <div class="top-tallas">
             {% for talla, prod in top_por_talla.items() %}
-            <a href="/?talla={{ talla }}{% if marca_sel %}&marca={{ marca_sel }}{% endif %}{% if categoria_sel %}&categoria={{ categoria_sel }}{% endif %}{% for t in tiendas_sel %}&tiendas={{ t }}{% endfor %}" class="top-talla-card">
+            {% set _url_amigable = construir_url_amigable(categoria=categoria_sel or None, marca=marca_sel or None, talla=talla) %}
+            <a href="{{ _url_amigable if _url_amigable else '/?talla=' ~ talla ~ ('&marca=' ~ marca_sel if marca_sel else '') ~ ('&categoria=' ~ categoria_sel if categoria_sel else '') }}" class="top-talla-card">
               <span class="top-talla-size">{{ talla }}</span>
               <span class="top-talla-nombre" title="{{ prod.nombre }}">{{ prod.nombre }}</span>
               <div class="top-talla-meta">
@@ -858,6 +861,58 @@
 
       renderizarChips();
     })();
+
+    // --- URLs amigables: interceptar form submit ---
+    (function() {
+      var form = document.getElementById('formBuscar');
+      if (!form) return;
+      var catSlugMap = {"Pa\u00f1ales": "panales", "Pa\u00f1ales de Agua": "panales-de-agua", "Toallitas Humedas": "toallitas", "F\u00f3rmulas Infantiles": "formulas"};
+      var slugifyMap = {};
+      {% for marca in marcas %}
+      slugifyMap["{{ marca }}"] = "{{ slugify(marca) }}";
+      {% endfor %}
+
+      function toSlug(text) {
+        if (!text) return '';
+        if (slugifyMap[text]) return slugifyMap[text];
+        return text.toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
+          .replace(/\+/g, '-plus').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+      }
+
+      form.addEventListener('submit', function(e) {
+        var cat = document.getElementById('categoria').value;
+        var marca = document.getElementById('marca').value;
+        var talla = document.getElementById('talla').value;
+        var catSlug = catSlugMap[cat];
+
+        if (catSlug) {
+          e.preventDefault();
+          var path = '/' + catSlug + '/';
+          if (marca) {
+            path += toSlug(marca) + '/';
+            if (talla) {
+              path += 'talla-' + toSlug(talla) + '/';
+            }
+          }
+          // Append remaining query params (tiendas, precio_max, orden)
+          var params = new URLSearchParams();
+          var formData = new FormData(form);
+          formData.forEach(function(val, key) {
+            if (['categoria', 'marca', 'talla'].indexOf(key) === -1 && val) {
+              params.append(key, val);
+            }
+          });
+          var qs = params.toString();
+          window.location.href = path + (qs ? '?' + qs : '');
+        }
+        // else: let the normal form submission proceed with query params
+      });
+    })();
+
+    // --- Service Worker ---
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/static/sw.js').catch(function() {});
+    }
   </script>
 
 </body>

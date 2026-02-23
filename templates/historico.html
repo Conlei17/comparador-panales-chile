@@ -7,6 +7,8 @@
   <meta name="description" content="{{ meta_descripcion }}">
   <link rel="canonical" href="{{ canonical_url }}">
   <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon-32x32.png') }}">
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+  <meta name="theme-color" content="#f4b8a8">
 
   <!-- Twitter Cards -->
   <meta name="twitter:card" content="summary_large_image">
@@ -357,6 +359,12 @@
     });
   </script>
   {% endif %}
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/static/sw.js').catch(function() {});
+    }
+  </script>
 
 </body>
 </html>

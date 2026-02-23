@@ -1,0 +1,22 @@
+{
+  "name": "BabyAhorro - Comparador de Panales",
+  "short_name": "BabyAhorro",
+  "description": "Compara precios de panales, toallitas y formulas infantiles en Chile",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fdf8f4",
+  "theme_color": "#f4b8a8",
+  "icons": [
+    {
+      "src": "/static/favicon-32x32.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "/static/og-image.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

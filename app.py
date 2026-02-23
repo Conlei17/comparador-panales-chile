@@ -15,7 +15,8 @@ import json
 import os
 import re
 import sqlite3
-from flask import Flask, render_template, request, jsonify, Response
+import unicodedata
+from flask import Flask, render_template, request, jsonify, Response, redirect
 from urllib.parse import urlencode, urljoin
 
 # --- CONFIGURACION ---
@@ -93,6 +94,68 @@ ORDEN_PERMITIDO = {
     "marca": "p.marca ASC, pr.precio ASC",
     "tienda": "t.nombre ASC, pr.precio ASC",
 }
+
+
+# --- URLs amigables: mapeo de slugs a categorias ---
+CATEGORIAS_SLUG = {
+    "panales": "Pañales",
+    "panales-de-agua": "Pañales de Agua",
+    "toallitas": "Toallitas Humedas",
+    "formulas": "Fórmulas Infantiles",
+}
+
+# Inverso: categoria real -> slug
+CATEGORIAS_SLUG_INV = {v: k for k, v in CATEGORIAS_SLUG.items()}
+
+
+def slugify(texto):
+    """Convierte texto a slug URL-friendly: 'Pañales' -> 'panales', 'RN+' -> 'rn-plus'."""
+    if not texto:
+        return ""
+    texto = texto.strip()
+    # Normalizar unicode (quitar acentos)
+    texto = unicodedata.normalize("NFKD", texto)
+    texto = "".join(c for c in texto if not unicodedata.combining(c))
+    texto = texto.lower()
+    texto = texto.replace("+", "-plus")
+    texto = re.sub(r"[^a-z0-9]+", "-", texto)
+    texto = texto.strip("-")
+    return texto
+
+
+def deslugify_talla(slug):
+    """Convierte slug de talla a valor real: 'talla-g' -> 'G', 'talla-rn-plus' -> 'RN+'."""
+    if not slug or not slug.startswith("talla-"):
+        return None
+    talla_part = slug[6:]  # quitar "talla-"
+    talla_part = talla_part.replace("-plus", "+")
+    talla_part = talla_part.upper()
+    # Validar contra tallas conocidas
+    if talla_part in ORDEN_TALLAS:
+        return talla_part
+    return None
+
+
+def deslugify_marca(slug, marcas_disponibles):
+    """Busca la marca real que corresponde al slug."""
+    for marca in marcas_disponibles:
+        if slugify(marca) == slug:
+            return marca
+    return None
+
+
+def construir_url_amigable(categoria=None, marca=None, talla=None):
+    """Construye la URL amigable a partir de los filtros."""
+    cat_slug = CATEGORIAS_SLUG_INV.get(categoria, "")
+    if not cat_slug:
+        # Sin categoria, no podemos hacer URL amigable
+        return None
+    path = f"/{cat_slug}/"
+    if marca:
+        path = f"/{cat_slug}/{slugify(marca)}/"
+        if talla:
+            path = f"/{cat_slug}/{slugify(marca)}/talla-{slugify(talla)}/"
+    return path
 
 
 def conectar_db():
@@ -555,19 +618,18 @@ def construir_sort_urls(request_args, orden_actual):
 # RUTAS
 # =============================================================
 
-@app.route("/")
-def index():
-    """Pagina principal: buscador y resultados."""
+def _render_index(categoria_path="", marca_path="", talla_path=""):
+    """Logica compartida para la pagina principal (/ y URLs amigables)."""
     opciones_filtros = obtener_opciones_filtros()
     marcas = opciones_filtros.get("", {}).get("marcas", [])
     tallas = opciones_filtros.get("", {}).get("tallas_por_marca", {}).get("", [])
     tiendas = obtener_tiendas()
     precio_max_global = obtener_precio_maximo()
 
-    # Leer filtros
-    marca_sel = request.args.get("marca", "")
-    talla_sel = request.args.get("talla", "")
-    categoria_sel = request.args.get("categoria", "")
+    # Filtros del path tienen prioridad, luego query params (backward compat)
+    marca_sel = marca_path or request.args.get("marca", "")
+    talla_sel = talla_path or request.args.get("talla", "")
+    categoria_sel = categoria_path or request.args.get("categoria", "")
     producto_sel = request.args.get("producto", "")
     tiendas_sel = request.args.getlist("tiendas")
     precio_max_str = request.args.get("precio_max", "")
@@ -655,18 +717,26 @@ def index():
         meta_descripcion = ("Compara precios de panales, toallitas y formulas infantiles en 9 tiendas de Chile. "
                             "Encuentra el mas barato entre Jumbo, Cruz Verde, Salcobrand y mas.")
 
-    # Canonical: solo filtros semanticos (marca, talla, categoria)
-    canonical_params = {}
-    if categoria_sel:
-        canonical_params["categoria"] = categoria_sel
-    if marca_sel:
-        canonical_params["marca"] = marca_sel
-    if talla_sel:
-        canonical_params["talla"] = talla_sel
-    if canonical_params:
-        canonical_url = request.url_root.rstrip("/") + "/?" + urlencode(canonical_params)
+    # Canonical: apunta siempre a la URL amigable si es posible
+    base = request.url_root.rstrip("/")
+    url_amigable = construir_url_amigable(
+        categoria=categoria_sel or None,
+        marca=marca_sel or None,
+        talla=talla_sel or None,
+    )
+    if url_amigable:
+        canonical_url = base + url_amigable
+    elif categoria_sel or marca_sel or talla_sel:
+        canonical_params = {}
+        if categoria_sel:
+            canonical_params["categoria"] = categoria_sel
+        if marca_sel:
+            canonical_params["marca"] = marca_sel
+        if talla_sel:
+            canonical_params["talla"] = talla_sel
+        canonical_url = base + "/?" + urlencode(canonical_params)
     else:
-        canonical_url = request.url_root.rstrip("/") + "/"
+        canonical_url = base + "/"
 
     # Descripcion OG dinamica para compartir
     og_partes = []
@@ -709,7 +779,58 @@ def index():
         titulo_pagina=titulo_pagina,
         meta_descripcion=meta_descripcion,
         canonical_url=canonical_url,
+        construir_url_amigable=construir_url_amigable,
+        slugify=slugify,
     )
+
+
+@app.route("/")
+def index():
+    """Pagina principal: buscador y resultados."""
+    return _render_index()
+
+
+@app.route("/<cat_slug>/")
+def index_categoria(cat_slug):
+    """URL amigable por categoria: /panales/, /toallitas/, /formulas/"""
+    categoria = CATEGORIAS_SLUG.get(cat_slug)
+    if not categoria:
+        return redirect("/"), 302
+    return _render_index(categoria_path=categoria)
+
+
+@app.route("/<cat_slug>/<marca_slug>/")
+def index_categoria_marca(cat_slug, marca_slug):
+    """URL amigable por categoria + marca: /panales/pampers/"""
+    categoria = CATEGORIAS_SLUG.get(cat_slug)
+    if not categoria:
+        return redirect("/"), 302
+    # Buscar marca real
+    opciones = obtener_opciones_filtros()
+    marcas_cat = opciones.get(categoria, {}).get("marcas", [])
+    marcas_all = opciones.get("", {}).get("marcas", [])
+    marca = deslugify_marca(marca_slug, marcas_cat) or deslugify_marca(marca_slug, marcas_all)
+    if not marca:
+        return redirect(f"/{cat_slug}/"), 302
+    return _render_index(categoria_path=categoria, marca_path=marca)
+
+
+@app.route("/<cat_slug>/<marca_slug>/<talla_slug>/")
+def index_categoria_marca_talla(cat_slug, marca_slug, talla_slug):
+    """URL amigable por categoria + marca + talla: /panales/pampers/talla-g/"""
+    categoria = CATEGORIAS_SLUG.get(cat_slug)
+    if not categoria:
+        return redirect("/"), 302
+    opciones = obtener_opciones_filtros()
+    marcas_cat = opciones.get(categoria, {}).get("marcas", [])
+    marcas_all = opciones.get("", {}).get("marcas", [])
+    marca = deslugify_marca(marca_slug, marcas_cat) or deslugify_marca(marca_slug, marcas_all)
+    if not marca:
+        return redirect(f"/{cat_slug}/"), 302
+    talla = deslugify_talla(talla_slug)
+    if not talla:
+        return redirect(f"/{cat_slug}/{marca_slug}/"), 302
+    return _render_index(categoria_path=categoria, marca_path=marca, talla_path=talla)
 
 
 @app.route("/historico")
@@ -850,49 +971,36 @@ def robots_txt():
 
 @app.route("/sitemap.xml")
 def sitemap_xml():
-    """Genera sitemap XML dinamico con categorias y marcas."""
+    """Genera sitemap XML dinamico con URLs amigables."""
     base_url = request.url_root.rstrip("/")
 
     urls = [
         (f"{base_url}/", "1.0", "daily"),
         (f"{base_url}/historico", "0.8", "daily"),
-        (f"{base_url}/?categoria=Pa%C3%B1ales", "0.9", "daily"),
-        (f"{base_url}/?categoria=Toallitas+Humedas", "0.7", "daily"),
-        (f"{base_url}/?categoria=F%C3%B3rmulas+Infantiles", "0.7", "daily"),
     ]
 
-    # Agregar marcas desde la DB
-    try:
-        marcas = obtener_marcas()
-        for marca in marcas:
-            marca_encoded = urlencode({"marca": marca})
-            urls.append((f"{base_url}/?{marca_encoded}", "0.8", "daily"))
+    # Categorias con URLs amigables
+    for cat_slug, cat_nombre in CATEGORIAS_SLUG.items():
+        priority = "0.9" if cat_nombre == "Pañales" else "0.7"
+        urls.append((f"{base_url}/{cat_slug}/", priority, "daily"))
 
-            # Combinaciones marca+talla existentes
-            conn = conectar_db()
-            cursor = conn.cursor()
-            cursor.execute("SELECT MAX(fecha_scraping) FROM precios")
-            ultima_fecha = cursor.fetchone()[0]
-            if ultima_fecha:
-                query = f"""
-                    SELECT DISTINCT p.nombre FROM productos p
-                    JOIN precios pr ON pr.producto_id = p.id
-                    WHERE pr.fecha_scraping = ?
-                      AND LOWER(p.marca) = LOWER(?)
-                      AND pr.precio IS NOT NULL
-                      {query_excluir_no_panales()}
-                """
-                cursor.execute(query, [ultima_fecha, marca])
-                nombres = [row["nombre"] for row in cursor.fetchall()]
-                tallas_marca = set()
-                for nombre in nombres:
-                    talla = detectar_talla(nombre)
-                    if talla:
-                        tallas_marca.add(talla)
-                for talla in sorted(tallas_marca):
-                    params = urlencode({"marca": marca, "talla": talla})
-                    urls.append((f"{base_url}/?{params}", "0.6", "daily"))
-            conn.close()
+    # Agregar marcas desde la DB con URLs amigables
+    try:
+        opciones = obtener_opciones_filtros()
+        for cat_slug, cat_nombre in CATEGORIAS_SLUG.items():
+            cat_data = opciones.get(cat_nombre, {})
+            marcas_cat = cat_data.get("marcas", [])
+            tallas_por_marca = cat_data.get("tallas_por_marca", {})
+
+            for marca in marcas_cat:
+                marca_s = slugify(marca)
+                urls.append((f"{base_url}/{cat_slug}/{marca_s}/", "0.8", "daily"))
+
+                # Combinaciones marca+talla
+                tallas = tallas_por_marca.get(marca, [])
+                for talla in tallas:
+                    talla_s = slugify(talla)
+                    urls.append((f"{base_url}/{cat_slug}/{marca_s}/talla-{talla_s}/", "0.6", "daily"))
     except Exception:
         pass
 
