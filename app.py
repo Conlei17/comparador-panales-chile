@@ -15,8 +15,10 @@ import json
 import os
 import re
 import sqlite3
+import time
 import unicodedata
-from flask import Flask, render_template, request, jsonify, Response, redirect
+from collections import defaultdict
+from flask import Flask, render_template, request, jsonify, Response, redirect, abort
 from urllib.parse import urlencode, urljoin
 
 # --- CONFIGURACION ---
@@ -615,6 +617,149 @@ def construir_sort_urls(request_args, orden_actual):
 
 
 # =============================================================
+# AGRUPACION DE PRODUCTOS (para paginas individuales)
+# =============================================================
+
+_cache_productos_agrupados = {"data": None, "slug_map": None, "ts": 0}
+CACHE_TTL = 3600  # 1 hora
+
+
+def obtener_productos_agrupados():
+    """
+    Agrupa productos del ultimo scraping por (marca_normalizada, talla, cantidad).
+    Retorna (grupos, slug_map) donde:
+    - grupos: dict con key (marca_norm, talla, cantidad) -> {nombre, slug, imagen, cat_slug, marca_slug, ids: [...]}
+    - slug_map: dict slug -> grupo (para lookup rapido)
+    Usa cache en memoria con TTL de 1 hora.
+    """
+    ahora = time.time()
+    if _cache_productos_agrupados["data"] is not None and (ahora - _cache_productos_agrupados["ts"]) < CACHE_TTL:
+        return _cache_productos_agrupados["data"], _cache_productos_agrupados["slug_map"]
+
+    conn = conectar_db()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT MAX(fecha_scraping) FROM precios")
+    ultima_fecha = cursor.fetchone()[0]
+    if not ultima_fecha:
+        conn.close()
+        return {}, {}
+
+    query = f"""
+        SELECT p.id, p.nombre, p.marca, p.tamano_unidades, p.imagen_url,
+               pr.precio, pr.precio_por_unidad, pr.precio_lista,
+               t.nombre as tienda, p.url
+        FROM precios pr
+        JOIN productos p ON p.id = pr.producto_id
+        JOIN tiendas t ON t.id = pr.tienda_id
+        WHERE pr.fecha_scraping = ?
+          AND pr.precio IS NOT NULL
+          {query_excluir_no_panales()}
+        GROUP BY p.id, t.id
+        ORDER BY pr.precio_por_unidad ASC
+    """
+    cursor.execute(query, [ultima_fecha])
+    rows = cursor.fetchall()
+    conn.close()
+
+    # Agrupar por (marca_normalizada, talla, cantidad)
+    grupos_raw = defaultdict(list)
+    for row in rows:
+        r = dict(row)
+        marca_norm = normalizar_marca(r["marca"])
+        talla = detectar_talla(r["nombre"])
+        cantidad = r["tamano_unidades"]
+        categoria = detectar_categoria(r["nombre"])
+
+        # Para categorias sin PPU (formulas), no agrupar
+        if categoria != "Fórmulas Infantiles" and not r.get("precio_por_unidad"):
+            continue
+
+        key = (marca_norm.lower() if marca_norm else "", talla or "", cantidad or 0)
+        r["marca_normalizada"] = marca_norm
+        r["talla"] = talla
+        r["categoria"] = categoria
+        grupos_raw[key].append(r)
+
+    # Construir grupos con metadatos
+    grupos = {}
+    slug_map = {}
+    slugs_vistos = {}  # para detectar colisiones
+
+    for key, ofertas in grupos_raw.items():
+        marca_norm_lower, talla, cantidad = key
+        if not marca_norm_lower:
+            continue
+
+        # Nombre canonico = el mas corto
+        nombre_canonico = min((o["nombre"] for o in ofertas), key=len)
+
+        # Imagen = primera no nula
+        imagen = None
+        for o in ofertas:
+            if o.get("imagen_url"):
+                imagen = o["imagen_url"]
+                break
+
+        # Categoria (todas las ofertas deberian ser la misma)
+        categoria = ofertas[0]["categoria"]
+        cat_slug = CATEGORIAS_SLUG_INV.get(categoria, "")
+        if not cat_slug:
+            continue
+
+        marca_norm = ofertas[0]["marca_normalizada"]
+        marca_slug = slugify(marca_norm)
+
+        # Generar slug
+        slug_base = slugify(nombre_canonico)
+
+        # Manejar colisiones
+        if slug_base in slugs_vistos and slugs_vistos[slug_base] != key:
+            slug_base = f"{slug_base}-{cantidad}u" if cantidad else f"{slug_base}-{id(key)}"
+
+        slugs_vistos[slug_base] = key
+
+        producto_ids = list(set(o["id"] for o in ofertas))
+
+        grupo = {
+            "nombre": nombre_canonico,
+            "slug": slug_base,
+            "imagen": imagen,
+            "cat_slug": cat_slug,
+            "marca_slug": marca_slug,
+            "marca": marca_norm,
+            "talla": talla,
+            "cantidad": cantidad,
+            "categoria": categoria,
+            "ids": producto_ids,
+            "ofertas": ofertas,
+        }
+
+        grupos[key] = grupo
+        slug_map[slug_base] = grupo
+
+    _cache_productos_agrupados["data"] = grupos
+    _cache_productos_agrupados["slug_map"] = slug_map
+    _cache_productos_agrupados["ts"] = ahora
+
+    return grupos, slug_map
+
+
+def obtener_url_detalle(producto):
+    """Dado un producto (dict), retorna la URL de detalle si existe un grupo."""
+    marca_norm = normalizar_marca(producto.get("marca", ""))
+    talla = detectar_talla(producto.get("nombre", ""))
+    cantidad = producto.get("tamano_unidades") or 0
+    key = (marca_norm.lower() if marca_norm else "", talla or "", cantidad)
+
+    grupos, _ = obtener_productos_agrupados()
+    grupo = grupos.get(key)
+    if grupo:
+        return f"/{grupo['cat_slug']}/{grupo['marca_slug']}/producto/{grupo['slug']}/"
+    return None
+
+
+# =============================================================
 # RUTAS
 # =============================================================
 
@@ -666,6 +811,10 @@ def _render_index(categoria_path="", marca_path="", talla_path=""):
             producto_param=producto_sel or None,
             orden=orden_actual,
         )
+        # Agregar url_detalle a cada producto
+        for p in productos:
+            p["url_detalle"] = obtener_url_detalle(p)
+
         ahorro = calcular_ahorro(productos)
 
         # Top por talla: solo cuando NO hay filtro de talla
@@ -831,6 +980,118 @@ def index_categoria_marca_talla(cat_slug, marca_slug, talla_slug):
     if not talla:
         return redirect(f"/{cat_slug}/{marca_slug}/"), 302
     return _render_index(categoria_path=categoria, marca_path=marca, talla_path=talla)
+
+
+@app.route("/<cat_slug>/<marca_slug>/producto/<producto_slug>/")
+def producto_detalle(cat_slug, marca_slug, producto_slug):
+    """Pagina individual de producto: agrupa ofertas de multiples tiendas."""
+    # Validar categoria
+    categoria = CATEGORIAS_SLUG.get(cat_slug)
+    if not categoria:
+        abort(404)
+
+    # Validar marca
+    opciones = obtener_opciones_filtros()
+    marcas_cat = opciones.get(categoria, {}).get("marcas", [])
+    marcas_all = opciones.get("", {}).get("marcas", [])
+    marca = deslugify_marca(marca_slug, marcas_cat) or deslugify_marca(marca_slug, marcas_all)
+    if not marca:
+        abort(404)
+
+    # Buscar grupo por slug
+    _, slug_map = obtener_productos_agrupados()
+    grupo = slug_map.get(producto_slug)
+    if not grupo:
+        abort(404)
+
+    # Validar que el grupo corresponde a la categoria y marca del URL
+    if grupo["cat_slug"] != cat_slug or grupo["marca_slug"] != marca_slug:
+        abort(404)
+
+    # Ordenar ofertas por precio_por_unidad
+    ofertas = sorted(grupo["ofertas"], key=lambda o: (
+        0 if o.get("precio_por_unidad") else 1,
+        o.get("precio_por_unidad") or 0,
+        o.get("precio") or 0,
+    ))
+
+    # Calcular descuentos
+    for oferta in ofertas:
+        precio_lista = oferta.get("precio_lista")
+        precio = oferta.get("precio")
+        if precio_lista and precio and precio_lista > precio:
+            oferta["descuento_pct"] = round((precio_lista - precio) / precio_lista * 100)
+        else:
+            oferta["descuento_pct"] = None
+            oferta["precio_lista"] = None
+
+    # Mejor precio
+    mejor_precio = ofertas[0].get("precio") if ofertas else None
+    mejor_ppu = ofertas[0].get("precio_por_unidad") if ofertas else None
+
+    # Consultar historico para cada producto_id, agrupado por tienda
+    conn = conectar_db()
+    cursor = conn.cursor()
+    historico_por_tienda = {}
+    for oferta in ofertas:
+        tienda = oferta["tienda"]
+        pid = oferta["id"]
+        cursor.execute("""
+            SELECT pr.precio, pr.precio_por_unidad, pr.fecha_scraping
+            FROM precios pr
+            WHERE pr.producto_id = ?
+            ORDER BY pr.fecha_scraping ASC
+        """, (pid,))
+        datos = [dict(row) for row in cursor.fetchall()]
+        if datos:
+            if tienda not in historico_por_tienda:
+                historico_por_tienda[tienda] = []
+            historico_por_tienda[tienda].extend(datos)
+
+    conn.close()
+
+    # Deduplicar fechas por tienda (quedarse con el ultimo valor por fecha)
+    for tienda in historico_por_tienda:
+        datos = historico_por_tienda[tienda]
+        por_fecha = {}
+        for d in datos:
+            fecha = d["fecha_scraping"][:10]
+            por_fecha[fecha] = d
+        historico_por_tienda[tienda] = [por_fecha[f] for f in sorted(por_fecha.keys())]
+
+    # SEO
+    nombre = grupo["nombre"]
+    talla_str = f" Talla {grupo['talla']}" if grupo["talla"] else ""
+    cantidad_str = f" {grupo['cantidad']} Unidades" if grupo["cantidad"] else ""
+
+    titulo_pagina = f"{nombre} - Compara precios | BabyAhorro"
+    if mejor_ppu:
+        meta_descripcion = (f"{nombre}{talla_str}{cantidad_str}. "
+                            f"Desde {formatear_precio(mejor_ppu)}/unidad. "
+                            f"Compara precios en {len(ofertas)} tienda{'s' if len(ofertas) != 1 else ''}.")
+    else:
+        meta_descripcion = (f"{nombre}{talla_str}{cantidad_str}. "
+                            f"Compara precios entre tiendas chilenas en BabyAhorro.")
+
+    base = request.url_root.rstrip("/")
+    canonical_url = f"{base}/{cat_slug}/{marca_slug}/producto/{producto_slug}/"
+
+    return render_template(
+        "producto.html",
+        grupo=grupo,
+        ofertas=ofertas,
+        mejor_precio=mejor_precio,
+        mejor_ppu=mejor_ppu,
+        historico_por_tienda=historico_por_tienda,
+        titulo_pagina=titulo_pagina,
+        meta_descripcion=meta_descripcion,
+        canonical_url=canonical_url,
+        cat_slug=cat_slug,
+        marca_slug=marca_slug,
+        categoria=categoria,
+        marca=marca,
+        logos_tiendas=LOGOS_TIENDAS,
+    )
 
 
 @app.route("/historico")
@@ -1001,6 +1262,11 @@ def sitemap_xml():
                 for talla in tallas:
                     talla_s = slugify(talla)
                     urls.append((f"{base_url}/{cat_slug}/{marca_s}/talla-{talla_s}/", "0.6", "daily"))
+        # Paginas de producto individual
+        _, slug_map = obtener_productos_agrupados()
+        for slug, grupo in slug_map.items():
+            url_producto = f"{base_url}/{grupo['cat_slug']}/{grupo['marca_slug']}/producto/{slug}/"
+            urls.append((url_producto, "0.7", "daily"))
     except Exception:
         pass
 

@@ -1454,6 +1454,129 @@ body.dark .checkbox-label input[type="checkbox"]:checked + .chip {
   color: var(--text-muted);
 }
 
+/* --- Breadcrumbs --- */
+.breadcrumbs {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 1rem;
+  padding: 0.5rem 0;
+}
+
+.breadcrumbs a {
+  color: var(--link-color);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.breadcrumbs a:hover {
+  color: var(--accent-pink);
+}
+
+.breadcrumb-sep {
+  color: var(--text-lighter);
+  font-size: 0.9rem;
+}
+
+/* --- Producto Hero --- */
+.producto-hero {
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-start;
+  background: var(--bg-surface);
+  border-radius: 16px;
+  padding: 1.5rem;
+  margin-bottom: 1.25rem;
+  box-shadow: 0 4px 16px var(--shadow);
+  border: 1px solid var(--border-lighter);
+}
+
+.producto-hero-img {
+  width: 180px;
+  height: 180px;
+  object-fit: contain;
+  border-radius: 12px;
+  background: var(--bg-input);
+  flex-shrink: 0;
+}
+
+.producto-hero-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.producto-hero-nombre {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+  line-height: 1.3;
+}
+
+.producto-hero-meta {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.producto-hero-marca {
+  font-weight: 600;
+}
+
+.producto-hero-sep {
+  color: var(--text-lighter);
+}
+
+.precio-grande {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: var(--best-green);
+  font-family: 'Nunito', sans-serif;
+  line-height: 1.2;
+}
+
+.ppu-grande-label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.producto-hero-tiendas {
+  font-size: 0.85rem;
+  color: var(--text-light);
+}
+
+/* --- Seccion titulo --- */
+.seccion-titulo {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  margin-bottom: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* --- Link producto (en resultados) --- */
+.link-producto {
+  color: var(--text-primary);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.link-producto:hover {
+  color: var(--accent-pink);
+}
+
 /* --- Footer --- */
 .footer {
   text-align: center;
@@ -1540,6 +1663,31 @@ body.dark .checkbox-label input[type="checkbox"]:checked + .chip {
     width: 32px;
     height: 32px;
     font-size: 0.9rem;
+  }
+
+  /* Producto hero responsive */
+  .producto-hero {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 1rem;
+  }
+
+  .producto-hero-img {
+    width: 140px;
+    height: 140px;
+  }
+
+  .producto-hero-meta {
+    justify-content: center;
+  }
+
+  .producto-hero-nombre {
+    font-size: 1.1rem;
+  }
+
+  .precio-grande {
+    font-size: 1.5rem;
   }
 
   /* Comparador movil: cards en vez de tabla */

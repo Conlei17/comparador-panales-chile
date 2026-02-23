@@ -362,7 +362,11 @@
                 {% endif %}
               </td>
               <td class="col-nombre" title="{{ p.nombre }}">
-                {{ p.nombre }}
+                {% if p.url_detalle %}
+                  <a href="{{ p.url_detalle }}" class="link-producto">{{ p.nombre }}</a>
+                {% else %}
+                  {{ p.nombre }}
+                {% endif %}
                 {% if loop.first %}
                   <span class="badge-mejor">Mejor precio</span>
                 {% endif %}
@@ -403,7 +407,11 @@
             {% if p.imagen_url %}
               <img src="{{ p.imagen_url }}" alt="{{ p.nombre }}" class="card-thumb" loading="lazy">
             {% endif %}
-            <span class="card-nombre">{{ p.nombre }}</span>
+            {% if p.url_detalle %}
+              <a href="{{ p.url_detalle }}" class="card-nombre link-producto">{{ p.nombre }}</a>
+            {% else %}
+              <span class="card-nombre">{{ p.nombre }}</span>
+            {% endif %}
             {% if loop.first %}
               <span class="badge-mejor">Mejor precio</span>
             {% endif %}

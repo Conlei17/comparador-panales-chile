@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ titulo_pagina }}</title>
+  <meta name="description" content="{{ meta_descripcion }}">
+  <link rel="canonical" href="{{ canonical_url }}">
+  <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon-32x32.png') }}">
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+  <meta name="theme-color" content="#f4b8a8">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="product">
+  <meta property="og:title" content="{{ titulo_pagina }}">
+  <meta property="og:description" content="{{ meta_descripcion }}">
+  {% if grupo.imagen %}
+  <meta property="og:image" content="{{ grupo.imagen }}">
+  {% else %}
+  <meta property="og:image" content="{{ url_for('static', filename='og-image.png', _external=True) }}">
+  {% endif %}
+  <meta property="og:url" content="{{ canonical_url }}">
+
+  <!-- Twitter Cards -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="{{ titulo_pagina }}">
+  <meta name="twitter:description" content="{{ meta_descripcion }}">
+
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-H2K7K5G7C2"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-H2K7K5G7C2');
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script>
+    if (localStorage.getItem('darkMode') === 'true') {
+      document.documentElement.style.visibility = 'hidden';
+    }
+  </script>
+
+  <!-- Schema.org Product -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    "name": "{{ grupo.nombre|e }}",
+    "brand": {"@type": "Brand", "name": "{{ grupo.marca|e }}"},
+    {% if grupo.imagen %}"image": "{{ grupo.imagen }}",{% endif %}
+    "description": "{{ meta_descripcion|e }}",
+    "offers": {
+      "@type": "AggregateOffer",
+      "priceCurrency": "CLP",
+      "offerCount": {{ ofertas|length }},
+      {% if ofertas %}
+      "lowPrice": "{{ ofertas[0].precio }}",
+      "highPrice": "{{ ofertas[-1].precio }}",
+      {% endif %}
+      "offers": [
+        {% for o in ofertas %}
+        {
+          "@type": "Offer",
+          "price": "{{ o.precio }}",
+          "priceCurrency": "CLP",
+          "availability": "https://schema.org/InStock",
+          "seller": {"@type": "Organization", "name": "{{ o.tienda|e }}"}
+          {% if o.url %},"url": "{{ o.url }}"{% endif %}
+        }{{ "," if not loop.last else "" }}
+        {% endfor %}
+      ]
+    }
+  }
+  </script>
+</head>
+<body>
+
+  <script>
+    if (localStorage.getItem('darkMode') === 'true') {
+      document.body.classList.add('dark');
+      document.documentElement.style.visibility = '';
+    }
+  </script>
+
+  <!-- Header -->
+  <header class="header">
+    <button class="dark-toggle" onclick="toggleDark()" title="Cambiar tema" id="darkToggle">&#9790;</button>
+    <img src="{{ url_for('static', filename='logo.png') }}" alt="BabyAhorro" class="header-logo">
+    <p class="header-tagline">Ahorro real para familias reales</p>
+    <nav class="nav">
+      <a href="/" class="nav-link">Comparar precios</a>
+      <a href="/historico" class="nav-link">Hist&oacute;rico</a>
+    </nav>
+  </header>
+
+  <div class="container">
+
+    <!-- Breadcrumbs -->
+    <nav class="breadcrumbs">
+      <a href="/">Inicio</a>
+      <span class="breadcrumb-sep">&rsaquo;</span>
+      <a href="/{{ cat_slug }}/">{{ categoria }}</a>
+      <span class="breadcrumb-sep">&rsaquo;</span>
+      <a href="/{{ cat_slug }}/{{ marca_slug }}/">{{ marca }}</a>
+      <span class="breadcrumb-sep">&rsaquo;</span>
+      <span>{{ grupo.nombre }}</span>
+    </nav>
+
+    <!-- Hero -->
+    <div class="producto-hero">
+      {% if grupo.imagen %}
+      <img src="{{ grupo.imagen }}" alt="{{ grupo.nombre }}" class="producto-hero-img">
+      {% endif %}
+      <div class="producto-hero-info">
+        <h1 class="producto-hero-nombre">{{ grupo.nombre }}</h1>
+        <div class="producto-hero-meta">
+          <span class="producto-hero-marca">{{ grupo.marca }}</span>
+          {% if grupo.talla %}
+            <span class="producto-hero-sep">&middot;</span>
+            <span>Talla {{ grupo.talla }}</span>
+          {% endif %}
+          {% if grupo.cantidad %}
+            <span class="producto-hero-sep">&middot;</span>
+            <span>{{ grupo.cantidad }} unidades</span>
+          {% endif %}
+        </div>
+        {% if mejor_ppu %}
+        <div class="precio-grande">{{ mejor_ppu|precio }}/unidad</div>
+        <div class="ppu-grande-label">Mejor precio por unidad</div>
+        {% elif mejor_precio %}
+        <div class="precio-grande">{{ mejor_precio|precio }}</div>
+        <div class="ppu-grande-label">Mejor precio</div>
+        {% endif %}
+        <div class="producto-hero-tiendas">
+          Disponible en {{ ofertas|length }} tienda{{ 's' if ofertas|length != 1 else '' }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabla de precios (desktop) -->
+    {% if ofertas %}
+    <h2 class="seccion-titulo">Comparar precios por tienda</h2>
+    <div class="tabla-wrapper">
+      <table>
+        <colgroup>
+          <col style="width: 130px;">
+          <col style="width: auto;">
+          <col style="width: 130px;">
+          <col style="width: 100px;">
+          <col style="width: 100px;">
+        </colgroup>
+        <thead>
+          <tr>
+            <th>Tienda</th>
+            <th>Nombre</th>
+            <th>Precio</th>
+            <th>Precio/Unidad</th>
+            <th>Ver</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for o in ofertas %}
+          <tr class="{{ 'fila-mejor' if loop.first else '' }}">
+            <td class="col-tienda">
+              {% if logos_tiendas.get(o.tienda) %}
+                <img src="{{ url_for('static', filename='logos/' + logos_tiendas[o.tienda]) }}" alt="{{ o.tienda }}" class="logo-tienda">
+              {% endif %}
+              {{ o.tienda }}
+            </td>
+            <td class="col-nombre" title="{{ o.nombre }}">
+              {{ o.nombre }}
+              {% if loop.first %}
+                <span class="badge-mejor">Mejor precio</span>
+              {% endif %}
+            </td>
+            <td class="col-precio">
+              {% if o.descuento_pct %}
+                <span class="precio-lista">{{ o.precio_lista|precio }}</span>
+              {% endif %}
+              {{ o.precio|precio }}
+              {% if o.descuento_pct %}
+                <span class="badge-descuento">-{{ o.descuento_pct }}%</span>
+              {% endif %}
+            </td>
+            <td class="col-ppu">{{ o.precio_por_unidad|precio }}</td>
+            <td>
+              {% if o.url %}
+                <a href="{{ o.url }}" target="_blank" rel="noopener" class="link-tienda"
+                   onclick="gtag('event','click_producto_tienda',{tienda:'{{ o.tienda }}',producto:'{{ o.nombre|e }}',precio:{{ o.precio or 0 }}})">
+                  Ver en tienda &rarr;
+                </a>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Cards (movil) -->
+    <div class="cards">
+      {% for o in ofertas %}
+      <div class="card {{ 'card-mejor' if loop.first else '' }}">
+        <div class="card-header">
+          <span class="card-nombre">{{ o.nombre }}</span>
+          {% if loop.first %}
+            <span class="badge-mejor">Mejor precio</span>
+          {% endif %}
+        </div>
+        <div class="card-body">
+          <div>
+            <div class="card-label">Precio/Unidad</div>
+            <div class="card-ppu">{{ o.precio_por_unidad|precio }}</div>
+          </div>
+          <div>
+            <div class="card-label">Precio total</div>
+            <div class="card-value">
+              {% if o.descuento_pct %}
+                <span class="precio-lista">{{ o.precio_lista|precio }}</span>
+              {% endif %}
+              {{ o.precio|precio }}
+              {% if o.descuento_pct %}
+                <span class="badge-descuento">-{{ o.descuento_pct }}%</span>
+              {% endif %}
+            </div>
+          </div>
+          <div>
+            <div class="card-label">Cantidad</div>
+            <div class="card-value">{{ o.tamano_unidades or '-' }} unidades</div>
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="card-tienda">
+            {% if logos_tiendas.get(o.tienda) %}
+              <img src="{{ url_for('static', filename='logos/' + logos_tiendas[o.tienda]) }}" alt="{{ o.tienda }}" class="logo-tienda">
+            {% endif %}
+            {{ o.tienda }}
+          </span>
+          {% if o.url %}
+            <a href="{{ o.url }}" target="_blank" rel="noopener" class="link-tienda">
+              Ver en tienda &rarr;
+            </a>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Grafico historico -->
+    {% if historico_por_tienda %}
+    <h2 class="seccion-titulo">Hist&oacute;rico de precios</h2>
+    <div class="historico-detalle">
+      <div class="grafico-container">
+        <canvas id="grafico-historico"></canvas>
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    BabyAhorro &middot; Datos actualizados diariamente
+    <br>Hecho con &hearts; por una mam&aacute; primeriza
+  </footer>
+
+  <script>
+    function toggleDark() {
+      document.body.classList.toggle('dark');
+      var isDark = document.body.classList.contains('dark');
+      localStorage.setItem('darkMode', isDark);
+      document.getElementById('darkToggle').innerHTML = isDark ? '&#9788;' : '&#9790;';
+    }
+    (function() {
+      var isDark = document.body.classList.contains('dark');
+      document.getElementById('darkToggle').innerHTML = isDark ? '&#9788;' : '&#9790;';
+    })();
+  </script>
+
+  {% if historico_por_tienda %}
+  <script>
+    (function() {
+      var historico = {{ historico_por_tienda|tojson }};
+
+      // Colores distintos por tienda
+      var colores = [
+        '#e8a898', '#b8a8d8', '#7bc68f', '#f0c040', '#6cb4d8',
+        '#d87070', '#80c8c0', '#c8a060', '#a0a0d0'
+      ];
+
+      // Recopilar todas las fechas unicas
+      var todasFechas = new Set();
+      Object.values(historico).forEach(function(datos) {
+        datos.forEach(function(d) {
+          todasFechas.add(d.fecha_scraping.substring(0, 10));
+        });
+      });
+      var fechas = Array.from(todasFechas).sort();
+
+      // Crear datasets
+      var datasets = [];
+      var i = 0;
+      Object.keys(historico).forEach(function(tienda) {
+        var datos = historico[tienda];
+        var porFecha = {};
+        datos.forEach(function(d) {
+          porFecha[d.fecha_scraping.substring(0, 10)] = d.precio_por_unidad || d.precio;
+        });
+
+        var values = fechas.map(function(f) {
+          return porFecha[f] || null;
+        });
+
+        datasets.push({
+          label: tienda,
+          data: values,
+          borderColor: colores[i % colores.length],
+          backgroundColor: 'transparent',
+          tension: 0.3,
+          pointRadius: 3,
+          pointBackgroundColor: colores[i % colores.length],
+          spanGaps: true,
+        });
+        i++;
+      });
+
+      var ctx = document.getElementById('grafico-historico').getContext('2d');
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: fechas,
+          datasets: datasets,
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: { usePointStyle: true, padding: 15 }
+            },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  var val = context.parsed.y;
+                  return context.dataset.label + ': $' + Math.round(val).toLocaleString('es-CL').replace(/,/g, '.');
+                }
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: false,
+              ticks: {
+                callback: function(value) {
+                  return '$' + value.toLocaleString('es-CL');
+                }
+              }
+            }
+          }
+        }
+      });
+    })();
+  </script>
+  {% endif %}
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/static/sw.js').catch(function() {});
+    }
+  </script>
+
+</body>
+</html>
