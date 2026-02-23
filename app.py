@@ -44,6 +44,7 @@ EXCLUIR_ADULTO = [
     "%adulto%", "%incontinencia%", "%plenitud%", "%tena %",
     "%cotidian%", "%ladysoft%", "%emumed%", "%emuprotect%",
     "%proactive%", "% win %", "%win plus%", "%win premium%",
+    "%nosotras%",
 ]
 
 # Palabras clave para detectar panales de agua
