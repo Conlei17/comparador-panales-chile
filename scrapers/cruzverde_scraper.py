@@ -87,6 +87,9 @@ URL_MARCA_OVERRIDE = {
     "526896": "WaterWipes",  # Toallitas Húmedas Para Bebe X60
     "526897": "WaterWipes",  # Toallitas Húmedas Para Bebe X180
     "526898": "WaterWipes",  # Toallitas Húmedas Para Bebe 720 Toallitas
+    "274716": "Bubu",        # Pack Oferta 160 Toallitas Húmedas
+    "289350": "Emubaby",     # Toallitas Humedas Premium 50 Un.
+    "392794": "Pampers",     # Toallitas Húmedas Recién Nacido 48 Unidades
 }
 
 
