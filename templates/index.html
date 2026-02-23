@@ -3,15 +3,22 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BabyAhorro - Comparador de precios de cosas de beb&eacute;</title>
+  <title>{{ titulo_pagina }}</title>
+  <meta name="description" content="{{ meta_descripcion }}">
+  <link rel="canonical" href="{{ canonical_url }}">
   <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon-32x32.png') }}">
 
   <!-- Open Graph: preview al compartir por WhatsApp, redes sociales, etc -->
   <meta property="og:type" content="website">
-  <meta property="og:title" content="BabyAhorro - Comparador de precios de cosas de beb&eacute;">
-  <meta property="og:description" content="{{ og_descripcion }}">
+  <meta property="og:title" content="{{ titulo_pagina }}">
+  <meta property="og:description" content="{{ meta_descripcion }}">
   <meta property="og:image" content="{{ url_for('static', filename='og-image.png', _external=True) }}">
-  <meta property="og:url" content="{{ request.url }}">
+  <meta property="og:url" content="{{ canonical_url }}">
+
+  <!-- Twitter Cards -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="{{ titulo_pagina }}">
+  <meta name="twitter:description" content="{{ meta_descripcion }}">
 
   <!-- Google tag (gtag.js) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-H2K7K5G7C2"></script>
@@ -31,6 +38,46 @@
       document.documentElement.style.visibility = 'hidden';
     }
   </script>
+
+  <!-- Schema.org JSON-LD -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "BabyAhorro",
+    "url": "{{ request.url_root }}",
+    "description": "Comparador de precios de panales, toallitas y formulas infantiles en Chile"
+  }
+  </script>
+  {% if hay_filtro and productos %}
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    "itemListElement": [
+      {% for p in productos[:5] %}
+      {
+        "@type": "ListItem",
+        "position": {{ loop.index }},
+        "item": {
+          "@type": "Product",
+          "name": "{{ p.nombre|e }}",
+          "brand": {"@type": "Brand", "name": "{{ p.marca_normalizada|e }}"},
+          {% if p.imagen_url %}"image": "{{ p.imagen_url }}",{% endif %}
+          "offers": {
+            "@type": "Offer",
+            "price": "{{ p.precio }}",
+            "priceCurrency": "CLP",
+            "availability": "https://schema.org/InStock",
+            "seller": {"@type": "Organization", "name": "{{ p.tienda|e }}"}
+          }
+        }
+      }{{ "," if not loop.last else "" }}
+      {% endfor %}
+    ]
+  }
+  </script>
+  {% endif %}
 </head>
 <body>
 
@@ -59,7 +106,7 @@
 
     <!-- Filtros -->
     <form class="filtros" method="GET" action="/" id="formBuscar">
-      <h2>Buscar panales</h2>
+      <h1 class="h1-buscador">Comparador de precios de panales en Chile</h1>
 
       <!-- Fila de filtros principales -->
       <div class="filtros-grid">
@@ -410,11 +457,14 @@
       </div>
 
     {% else %}
-      <!-- Estado inicial -->
-      <div class="empty">
-        <div class="empty-icon">&#x1F476;</div>
-        <h3>Selecciona una marca, talla o escribe un nombre</h3>
-        <p>Compara precios entre Liquimax, Distribuidora Pepito, La Panalera y Tintin.</p>
+      <!-- Estado inicial con contenido SEO -->
+      <div class="seo-content">
+        <h2>Compara precios de panales en Chile</h2>
+        <p>BabyAhorro compara precios de panales, toallitas humedas y formulas infantiles
+           en 9 tiendas: Jumbo, Cruz Verde, Salcobrand, Farmacias Ahumada, Liquimax,
+           Distribuidora Pepito, La Panalera, Panales Tin Tin y Santa Isabel.</p>
+        <p>Encuentra panales Pampers, Huggies, Babysec y mas al mejor precio.
+           Datos actualizados diariamente.</p>
         {% if ultima_fecha %}
           <p class="empty-fecha">Datos actualizados el {{ ultima_fecha[:10] }}</p>
         {% endif %}

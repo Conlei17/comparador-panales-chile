@@ -11,11 +11,12 @@ Uso:
 Luego abre http://localhost:8080 en tu navegador.
 """
 
+import json
 import os
 import re
 import sqlite3
-from flask import Flask, render_template, request, jsonify
-from urllib.parse import urlencode
+from flask import Flask, render_template, request, jsonify, Response
+from urllib.parse import urlencode, urljoin
 
 # --- CONFIGURACION ---
 
@@ -624,6 +625,49 @@ def index():
     # Construir URLs de ordenamiento
     sort_urls = construir_sort_urls(request.args, orden_actual)
 
+    # --- SEO: titulo, meta description, canonical ---
+    if categoria_sel and marca_sel and talla_sel:
+        titulo_pagina = f"{marca_sel} Talla {talla_sel} - Compara precios | BabyAhorro"
+    elif marca_sel and talla_sel:
+        titulo_pagina = f"{marca_sel} Talla {talla_sel} - Compara precios | BabyAhorro"
+    elif categoria_sel and marca_sel:
+        titulo_pagina = f"{marca_sel} {categoria_sel} - Compara precios | BabyAhorro"
+    elif marca_sel:
+        titulo_pagina = f"Panales {marca_sel} - Precios y comparacion | BabyAhorro"
+    elif categoria_sel:
+        titulo_pagina = f"{categoria_sel} - Compara precios | BabyAhorro"
+    else:
+        titulo_pagina = "BabyAhorro - Comparador de precios de panales en Chile"
+
+    if hay_filtro and productos:
+        mejor = productos[0]
+        partes_desc = []
+        if marca_sel:
+            partes_desc.append(f"Panales {marca_sel}")
+        if talla_sel:
+            partes_desc.append(f"Talla {talla_sel}")
+        nombre_filtro = " ".join(partes_desc) if partes_desc else "Panales"
+        ppu = formatear_precio(mejor.get("precio_por_unidad"))
+        meta_descripcion = f"{nombre_filtro} desde {ppu}/unidad. Compara precios en 9 tiendas chilenas."
+    elif hay_filtro:
+        meta_descripcion = "Compara precios de panales, toallitas y formulas infantiles en 9 tiendas de Chile."
+    else:
+        meta_descripcion = ("Compara precios de panales, toallitas y formulas infantiles en 9 tiendas de Chile. "
+                            "Encuentra el mas barato entre Jumbo, Cruz Verde, Salcobrand y mas.")
+
+    # Canonical: solo filtros semanticos (marca, talla, categoria)
+    canonical_params = {}
+    if categoria_sel:
+        canonical_params["categoria"] = categoria_sel
+    if marca_sel:
+        canonical_params["marca"] = marca_sel
+    if talla_sel:
+        canonical_params["talla"] = talla_sel
+    if canonical_params:
+        canonical_url = request.url_root.rstrip("/") + "/?" + urlencode(canonical_params)
+    else:
+        canonical_url = request.url_root.rstrip("/") + "/"
+
     # Descripcion OG dinamica para compartir
     og_partes = []
     if marca_sel:
@@ -662,6 +706,9 @@ def index():
         top_por_talla=top_por_talla,
         og_descripcion=og_descripcion,
         opciones_filtros=opciones_filtros,
+        titulo_pagina=titulo_pagina,
+        meta_descripcion=meta_descripcion,
+        canonical_url=canonical_url,
     )
 
 
@@ -758,6 +805,12 @@ def historico():
 
     conn.close()
 
+    # SEO variables for historico
+    titulo_pagina = "Historico de Precios - BabyAhorro"
+    meta_descripcion = ("Historico de precios de panales en Chile. Revisa como cambian "
+                        "los precios dia a dia y encuentra el mejor momento para comprar.")
+    canonical_url = request.url_root.rstrip("/") + "/historico"
+
     return render_template(
         "historico.html",
         opciones_filtros=opciones_filtros,
@@ -775,7 +828,85 @@ def historico():
         total_dias=total_dias,
         fecha_inicio=fecha_inicio,
         fecha_fin=fecha_fin,
+        titulo_pagina=titulo_pagina,
+        meta_descripcion=meta_descripcion,
+        canonical_url=canonical_url,
     )
+
+
+@app.route("/robots.txt")
+def robots_txt():
+    """Genera robots.txt para SEO."""
+    base_url = request.url_root.rstrip("/")
+    content = (
+        "User-agent: *\n"
+        "Allow: /\n"
+        "Disallow: /?precio_max=\n"
+        "Disallow: /?orden=\n"
+        f"Sitemap: {base_url}/sitemap.xml\n"
+    )
+    return Response(content, mimetype="text/plain")
+
+
+@app.route("/sitemap.xml")
+def sitemap_xml():
+    """Genera sitemap XML dinamico con categorias y marcas."""
+    base_url = request.url_root.rstrip("/")
+
+    urls = [
+        (f"{base_url}/", "1.0", "daily"),
+        (f"{base_url}/historico", "0.8", "daily"),
+        (f"{base_url}/?categoria=Pa%C3%B1ales", "0.9", "daily"),
+        (f"{base_url}/?categoria=Toallitas+Humedas", "0.7", "daily"),
+        (f"{base_url}/?categoria=F%C3%B3rmulas+Infantiles", "0.7", "daily"),
+    ]
+
+    # Agregar marcas desde la DB
+    try:
+        marcas = obtener_marcas()
+        for marca in marcas:
+            marca_encoded = urlencode({"marca": marca})
+            urls.append((f"{base_url}/?{marca_encoded}", "0.8", "daily"))
+
+            # Combinaciones marca+talla existentes
+            conn = conectar_db()
+            cursor = conn.cursor()
+            cursor.execute("SELECT MAX(fecha_scraping) FROM precios")
+            ultima_fecha = cursor.fetchone()[0]
+            if ultima_fecha:
+                query = f"""
+                    SELECT DISTINCT p.nombre FROM productos p
+                    JOIN precios pr ON pr.producto_id = p.id
+                    WHERE pr.fecha_scraping = ?
+                      AND LOWER(p.marca) = LOWER(?)
+                      AND pr.precio IS NOT NULL
+                      {query_excluir_no_panales()}
+                """
+                cursor.execute(query, [ultima_fecha, marca])
+                nombres = [row["nombre"] for row in cursor.fetchall()]
+                tallas_marca = set()
+                for nombre in nombres:
+                    talla = detectar_talla(nombre)
+                    if talla:
+                        tallas_marca.add(talla)
+                for talla in sorted(tallas_marca):
+                    params = urlencode({"marca": marca, "talla": talla})
+                    urls.append((f"{base_url}/?{params}", "0.6", "daily"))
+            conn.close()
+    except Exception:
+        pass
+
+    xml_parts = ['<?xml version="1.0" encoding="UTF-8"?>']
+    xml_parts.append('<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">')
+    for loc, priority, changefreq in urls:
+        xml_parts.append("  <url>")
+        xml_parts.append(f"    <loc>{loc}</loc>")
+        xml_parts.append(f"    <changefreq>{changefreq}</changefreq>")
+        xml_parts.append(f"    <priority>{priority}</priority>")
+        xml_parts.append("  </url>")
+    xml_parts.append("</urlset>")
+
+    return Response("\n".join(xml_parts), mimetype="application/xml")
 
 
 if __name__ == "__main__":

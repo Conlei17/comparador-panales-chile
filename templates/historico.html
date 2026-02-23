@@ -3,8 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Hist&oacute;rico de Precios - BabyAhorro</title>
+  <title>{{ titulo_pagina }}</title>
+  <meta name="description" content="{{ meta_descripcion }}">
+  <link rel="canonical" href="{{ canonical_url }}">
   <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon-32x32.png') }}">
+
+  <!-- Twitter Cards -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="{{ titulo_pagina }}">
+  <meta name="twitter:description" content="{{ meta_descripcion }}">
+
   <!-- Google tag (gtag.js) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-H2K7K5G7C2"></script>
   <script>
@@ -57,7 +65,7 @@
     <!-- Buscador de producto -->
     <form class="filtros" method="GET" action="/historico" id="formHistorico"
           onsubmit="gtag('event','buscar_productos',{pagina:'historico',categoria:document.getElementById('categoria').value,marca:document.getElementById('marca').value,talla:document.getElementById('talla').value,tienda:document.getElementById('tienda').value})">
-      <h2>Buscar producto para ver su historico</h2>
+      <h1 class="h1-buscador">Historico de precios de panales</h1>
 
       <div class="filtros-grid">
         <div class="filtro-grupo">
