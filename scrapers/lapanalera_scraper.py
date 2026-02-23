@@ -105,6 +105,7 @@ def extraer_marca_del_nombre(nombre_producto):
         "Win", "Tutte", "Pequenin", "Tena", "Plenitud",
         "Ladysoft", "Aiwibi", "Emubaby", "Moltex", "Chelino",
         "Bambo", "Pingo", "Naty", "Eco Boom", "Biobaby",
+        "WaterWipes", "Waterwipes",
     ]
     nombre_lower = nombre_producto.lower()
     for marca in marcas_conocidas:
@@ -120,7 +121,23 @@ def extraer_cantidad_del_nombre(nombre_producto):
 
     En La Panalera la cantidad viene directamente en el nombre,
     por ejemplo: "36 unidades", "48 unidades", "70 pañales".
+    Tambien detecta packs multiplicativos como "60u x 12 u" = 720.
     """
+    # Packs multiplicativos: "60u x 12 u", "60u x 12", "3 paquetes X 60"
+    match = re.search(
+        r"(\d+)\s*(?:un|u|unidades?)\s*x\s*(\d+)\s*(?:un|u|unidades?)?\b",
+        nombre_producto, re.IGNORECASE,
+    )
+    if match:
+        return int(match.group(1)) * int(match.group(2))
+
+    match = re.search(
+        r"(\d+)\s*(?:paquetes?|cajas?|packs?)\s*x\s*(\d+)",
+        nombre_producto, re.IGNORECASE,
+    )
+    if match:
+        return int(match.group(1)) * int(match.group(2))
+
     patrones = [
         r"(\d+)\s*(?:unidades|unid|und)\b",
         r"(\d+)\s*(?:pa[ñn]ales)\b",

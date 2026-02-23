@@ -169,6 +169,8 @@ def conectar_db():
 
 MARCA_ALIASES = {
     "Nan Optipro": "Nan",
+    "Waterwipe": "WaterWipes",
+    "Waterwipes": "WaterWipes",
 }
 
 
