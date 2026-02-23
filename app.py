@@ -594,6 +594,17 @@ def formatear_precio(precio):
 app.jinja_env.filters["precio"] = formatear_precio
 
 
+def agregar_utm(url, campaign="comparador"):
+    """Agrega parametros UTM a una URL de tienda."""
+    if not url:
+        return url
+    sep = "&" if "?" in url else "?"
+    return f"{url}{sep}utm_source=babyahorro&utm_medium=referral&utm_campaign={campaign}"
+
+
+app.jinja_env.filters["utm"] = agregar_utm
+
+
 def construir_sort_urls(request_args, orden_actual):
     """Construye URLs para cada columna de ordenamiento, preservando filtros."""
     sort_urls = {}

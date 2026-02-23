@@ -190,7 +190,7 @@
             <td class="col-ppu">{{ o.precio_por_unidad|precio }}</td>
             <td>
               {% if o.url %}
-                <a href="{{ o.url }}" target="_blank" rel="noopener" class="link-tienda"
+                <a href="{{ o.url|utm('producto') }}" target="_blank" rel="noopener" class="link-tienda"
                    onclick="gtag('event','click_producto_tienda',{tienda:'{{ o.tienda }}',producto:'{{ o.nombre|e }}',precio:{{ o.precio or 0 }}})">
                   Ver en tienda &rarr;
                 </a>
@@ -242,7 +242,7 @@
             {{ o.tienda }}
           </span>
           {% if o.url %}
-            <a href="{{ o.url }}" target="_blank" rel="noopener" class="link-tienda">
+            <a href="{{ o.url|utm('producto') }}" target="_blank" rel="noopener" class="link-tienda">
               Ver en tienda &rarr;
             </a>
           {% endif %}

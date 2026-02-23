@@ -347,7 +347,7 @@
             <tr class="{{ 'fila-mejor' if loop.first else '' }}">
               <td>
                 <input type="checkbox" class="comparar-cb"
-                  data-producto='{{ {"nombre": p.nombre, "precio": p.precio, "ppu": p.precio_por_unidad, "cantidad": p.tamano_unidades, "tienda": p.tienda, "imagen": p.imagen_url or "", "url": p.url or ""}|tojson }}'
+                  data-producto='{{ {"nombre": p.nombre, "precio": p.precio, "ppu": p.precio_por_unidad, "cantidad": p.tamano_unidades, "tienda": p.tienda, "imagen": p.imagen_url or "", "url": p.url|utm or ""}|tojson }}'
                   onchange="toggleProducto(this, JSON.parse(this.dataset.producto))">
               </td>
               <td class="col-tienda">
@@ -384,7 +384,7 @@
               <td class="col-ppu">{{ p.precio_por_unidad|precio }}</td>
               <td>
                 {% if p.url %}
-                  <a href="{{ p.url }}" target="_blank" rel="noopener" class="link-tienda"
+                  <a href="{{ p.url|utm }}" target="_blank" rel="noopener" class="link-tienda"
                      onclick="gtag('event','click_producto_tienda',{tienda:'{{ p.tienda }}',producto:'{{ p.nombre|e }}',precio:{{ p.precio or 0 }}})">
                     Ver en tienda &rarr;
                   </a>
@@ -402,7 +402,7 @@
         <div class="card {{ 'card-mejor' if loop.first else '' }}">
           <div class="card-header">
             <input type="checkbox" class="comparar-cb"
-              data-producto='{{ {"nombre": p.nombre, "precio": p.precio, "ppu": p.precio_por_unidad, "cantidad": p.tamano_unidades, "tienda": p.tienda, "imagen": p.imagen_url or "", "url": p.url or ""}|tojson }}'
+              data-producto='{{ {"nombre": p.nombre, "precio": p.precio, "ppu": p.precio_por_unidad, "cantidad": p.tamano_unidades, "tienda": p.tienda, "imagen": p.imagen_url or "", "url": p.url|utm or ""}|tojson }}'
               onchange="toggleProducto(this, JSON.parse(this.dataset.producto))">
             {% if p.imagen_url %}
               <img src="{{ p.imagen_url }}" alt="{{ p.nombre }}" class="card-thumb" loading="lazy">
@@ -450,7 +450,7 @@
               {{ p.tienda }}
             </span>
             {% if p.url %}
-              <a href="{{ p.url }}" target="_blank" rel="noopener" class="link-tienda">
+              <a href="{{ p.url|utm }}" target="_blank" rel="noopener" class="link-tienda">
                 Ver en tienda &rarr;
               </a>
             {% endif %}
