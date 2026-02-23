@@ -77,8 +77,17 @@ MARCAS_CONOCIDAS = [
     "Bambo", "Pingo", "Naty", "Eco Boom", "Biobaby",
     "Nan", "Similac", "Nidal", "Enfamil", "S-26", "Alula",
     "Nutrilon", "Blemil", "Nestogen",
-    "Johnsons", "Johnson", "Huggies", "Babysec", "Pampers",
+    "Johnsons", "Johnson",
+    "WaterWipes", "Waterwipes",
 ]
+
+# SKUs de Cruz Verde cuyo nombre generico no identifica la marca
+# Mapeo: fragmento de URL -> marca correcta
+URL_MARCA_OVERRIDE = {
+    "526896": "WaterWipes",  # Toallitas Húmedas Para Bebe X60
+    "526897": "WaterWipes",  # Toallitas Húmedas Para Bebe X180
+    "526898": "WaterWipes",  # Toallitas Húmedas Para Bebe 720 Toallitas
+}
 
 
 def buscar_productos_api(query, count=PRODUCTOS_POR_PAGINA, start=0, refine=None):
@@ -230,7 +239,7 @@ def procesar_hit(hit):
             url = ""
 
         # Marca y cantidad
-        marca = extraer_marca(nombre)
+        marca = URL_MARCA_OVERRIDE.get(product_id, extraer_marca(nombre))
         cantidad = extraer_cantidad(nombre)
 
         # Precio por unidad
