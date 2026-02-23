@@ -204,6 +204,7 @@ def guardar_en_db(conn, productos, fecha_scraping):
         "Jumbo": "https://www.jumbo.cl",
         "Farmacias Ahumada": "https://www.farmaciasahumada.cl",
         "Cruz Verde": "https://www.cruzverde.cl",
+        "Salcobrand": "https://salcobrand.cl",
     }
 
     insertados = 0
@@ -418,6 +419,26 @@ def ejecutar_scraper_cruzverde():
         return False
 
 
+def ejecutar_scraper_salcobrand():
+    """
+    Ejecuta el scraper de Salcobrand.
+    Retorna True si se ejecuto correctamente.
+    """
+    print("\n")
+    print("=" * 60)
+    print("EJECUTANDO SCRAPER: Salcobrand")
+    print("=" * 60)
+
+    try:
+        from scrapers import salcobrand_scraper
+        salcobrand_scraper.main()
+        return True
+    except Exception as e:
+        print(f"ERROR ejecutando scraper de Salcobrand: {e}")
+        print("Continuando con los demas scrapers...\n")
+        return False
+
+
 # =============================================================
 # PROCESAMIENTO DE CSV
 # =============================================================
@@ -603,6 +624,7 @@ def main():
     resultados["jumbo"] = ejecutar_scraper_jumbo()
     resultados["ahumada"] = ejecutar_scraper_ahumada()
     resultados["cruzverde"] = ejecutar_scraper_cruzverde()
+    resultados["salcobrand"] = ejecutar_scraper_salcobrand()
 
     if not any(resultados.values()):
         print("\nERROR: Ningun scraper se ejecuto correctamente. Abortando.")
@@ -625,6 +647,7 @@ def main():
         "Jumbo": os.path.join(CARPETA_DATOS, "jumbo_precios.csv"),
         "Farmacias Ahumada": os.path.join(CARPETA_DATOS, "ahumada_precios.csv"),
         "Cruz Verde": os.path.join(CARPETA_DATOS, "cruzverde_precios.csv"),
+        "Salcobrand": os.path.join(CARPETA_DATOS, "salcobrand_precios.csv"),
     }
 
     for tienda, ruta in archivos_csv.items():

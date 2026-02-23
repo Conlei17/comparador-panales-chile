@@ -31,6 +31,8 @@ INCLUIR_PATRONES = [
     "%leche%", "%fórmula%", "%formula%", "%nan %", "%similac%",
     "%enfamil%", "%s-26%", "%purita%", "%nido%",
     "%splasher%", "%goodnites%", "%emubaby%",
+    "%waterwipes%", "%aqua baby%", "%merries%", "%terra %",
+    "%nenitos%", "%neniwipes%", "%althera%", "%cell skin%",
 ]
 
 # Excluir productos de adulto (incontinencia, pañales adulto, etc.)
@@ -80,6 +82,7 @@ LOGOS_TIENDAS = {
     "Jumbo": "jumbo.png",
     "Farmacias Ahumada": "ahumada.png",
     "Cruz Verde": "cruzverde.png",
+    "Salcobrand": "salcobrand.svg",
 }
 
 # Columnas permitidas para ordenar (whitelist contra SQL injection)
