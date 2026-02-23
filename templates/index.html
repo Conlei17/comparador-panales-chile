@@ -458,39 +458,14 @@
 
     {% else %}
       <!-- Estado inicial con contenido SEO -->
-      <div class="seo-content">
-        <div class="seo-icon">&#x1F476;</div>
-        <h2>Compara precios de panales en Chile</h2>
-        <p class="seo-subtitle">Encontra el mejor precio entre <strong>9 tiendas</strong> en segundos</p>
-
-        <div class="seo-features">
-          <div class="seo-feature">
-            <span class="seo-feature-icon">&#x1F50D;</span>
-            <span class="seo-feature-text">Panales, toallitas y f&oacute;rmulas</span>
-          </div>
-          <div class="seo-feature">
-            <span class="seo-feature-icon">&#x1F4B0;</span>
-            <span class="seo-feature-text">Precio por unidad para comparar f&aacute;cil</span>
-          </div>
-          <div class="seo-feature">
-            <span class="seo-feature-icon">&#x1F4C5;</span>
-            <span class="seo-feature-text">Datos actualizados diariamente</span>
-          </div>
-        </div>
-
-        <div class="seo-tiendas">
-          {% for tienda in tiendas %}
-          <span class="seo-tienda-chip">
-            {% if logos_tiendas.get(tienda) %}
-              <img src="{{ url_for('static', filename='logos/' + logos_tiendas[tienda]) }}" alt="{{ tienda }}">
-            {% endif %}
-            {{ tienda }}
-          </span>
-          {% endfor %}
-        </div>
-
-        <p class="seo-marcas">Pampers &middot; Huggies &middot; Babysec &middot; Cotidian &middot; y m&aacute;s</p>
-
+      <div class="empty">
+        <div class="empty-icon">&#x1F476;</div>
+        <h3>Selecciona una marca, talla o categor&iacute;a</h3>
+        <p>BabyAhorro compara precios de pa&ntilde;ales, toallitas h&uacute;medas y f&oacute;rmulas infantiles
+           en 9 tiendas: Jumbo, Cruz Verde, Salcobrand, Farmacias Ahumada, Liquimax,
+           Distribuidora Pepito, La Pa&ntilde;alera, Pa&ntilde;ales Tin Tin y Santa Isabel.</p>
+        <p>Encuentra pa&ntilde;ales Pampers, Huggies, Babysec y m&aacute;s al mejor precio.
+           Datos actualizados diariamente.</p>
         {% if ultima_fecha %}
           <p class="empty-fecha">Datos actualizados el {{ ultima_fecha[:10] }}</p>
         {% endif %}
