@@ -459,12 +459,38 @@
     {% else %}
       <!-- Estado inicial con contenido SEO -->
       <div class="seo-content">
+        <div class="seo-icon">&#x1F476;</div>
         <h2>Compara precios de panales en Chile</h2>
-        <p>BabyAhorro compara precios de panales, toallitas humedas y formulas infantiles
-           en 9 tiendas: Jumbo, Cruz Verde, Salcobrand, Farmacias Ahumada, Liquimax,
-           Distribuidora Pepito, La Panalera, Panales Tin Tin y Santa Isabel.</p>
-        <p>Encuentra panales Pampers, Huggies, Babysec y mas al mejor precio.
-           Datos actualizados diariamente.</p>
+        <p class="seo-subtitle">Encontra el mejor precio entre <strong>9 tiendas</strong> en segundos</p>
+
+        <div class="seo-features">
+          <div class="seo-feature">
+            <span class="seo-feature-icon">&#x1F50D;</span>
+            <span class="seo-feature-text">Panales, toallitas y f&oacute;rmulas</span>
+          </div>
+          <div class="seo-feature">
+            <span class="seo-feature-icon">&#x1F4B0;</span>
+            <span class="seo-feature-text">Precio por unidad para comparar f&aacute;cil</span>
+          </div>
+          <div class="seo-feature">
+            <span class="seo-feature-icon">&#x1F4C5;</span>
+            <span class="seo-feature-text">Datos actualizados diariamente</span>
+          </div>
+        </div>
+
+        <div class="seo-tiendas">
+          {% for tienda in tiendas %}
+          <span class="seo-tienda-chip">
+            {% if logos_tiendas.get(tienda) %}
+              <img src="{{ url_for('static', filename='logos/' + logos_tiendas[tienda]) }}" alt="{{ tienda }}">
+            {% endif %}
+            {{ tienda }}
+          </span>
+          {% endfor %}
+        </div>
+
+        <p class="seo-marcas">Pampers &middot; Huggies &middot; Babysec &middot; Cotidian &middot; y m&aacute;s</p>
+
         {% if ultima_fecha %}
           <p class="empty-fecha">Datos actualizados el {{ ultima_fecha[:10] }}</p>
         {% endif %}
