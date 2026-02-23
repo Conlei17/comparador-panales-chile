@@ -338,6 +338,9 @@ def extraer_productos_de_json(data):
         link = p.get("slug") or p.get("link") or p.get("linkText", "")
         if link and not link.startswith("http"):
             link = f"https://www.jumbo.cl/{link.lstrip('/')}"
+        # VTEX requiere /p al final para que la URL funcione
+        if link and "jumbo.cl" in link and not link.rstrip("/").endswith("/p"):
+            link = link.rstrip("/") + "/p"
         url = link or ""
 
         cantidad = extraer_cantidad(nombre)
