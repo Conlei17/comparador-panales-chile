@@ -61,6 +61,9 @@ def obtener_pagina(url):
         # Lanza un error si el codigo HTTP indica un problema (404, 500, etc.)
         respuesta.raise_for_status()
 
+        # Forzar encoding UTF-8 (el servidor a veces lo reporta mal)
+        respuesta.encoding = "utf-8"
+
         # Parseamos el HTML con lxml (mas rapido que el parser por defecto)
         return BeautifulSoup(respuesta.text, "lxml")
 
