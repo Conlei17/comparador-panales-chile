@@ -7,6 +7,8 @@
   <meta name="description" content="{{ meta_descripcion }}">
   <link rel="canonical" href="{{ canonical_url }}">
   <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon-32x32.png') }}">
+  <link rel="icon" type="image/png" sizes="192x192" href="{{ url_for('static', filename='favicon-192x192.png') }}">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
   <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
   <meta name="theme-color" content="#f4b8a8">
 
@@ -93,7 +95,7 @@
   <!-- Header -->
   <header class="header">
     <button class="dark-toggle" onclick="toggleDark()" title="Cambiar tema" id="darkToggle">&#9790;</button>
-    <img src="{{ url_for('static', filename='logo.png') }}" alt="BabyAhorro" class="header-logo">
+    <a href="/"><img src="{{ url_for('static', filename='logo.png') }}" alt="BabyAhorro" class="header-logo"></a>
     <p class="header-tagline">Ahorro real para familias reales</p>
     <nav class="nav">
       <a href="/" class="nav-link nav-link--active">Comparar precios</a>

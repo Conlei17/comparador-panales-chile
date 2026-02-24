@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{{ "Alerta activada" if estado == "confirmada" else "Alerta cancelada" }} - BabyAhorro</title>
   <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon-32x32.png') }}">
+  <link rel="icon" type="image/png" sizes="192x192" href="{{ url_for('static', filename='favicon-192x192.png') }}">
+  <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
@@ -24,7 +26,7 @@
 
   <header class="header">
     <button class="dark-toggle" onclick="toggleDark()" title="Cambiar tema" id="darkToggle">&#9790;</button>
-    <img src="{{ url_for('static', filename='logo.png') }}" alt="BabyAhorro" class="header-logo">
+    <a href="/"><img src="{{ url_for('static', filename='logo.png') }}" alt="BabyAhorro" class="header-logo"></a>
     <p class="header-tagline">Ahorro real para familias reales</p>
     <nav class="nav">
       <a href="/" class="nav-link">Comparar precios</a>
