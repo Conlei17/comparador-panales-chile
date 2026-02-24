@@ -158,16 +158,6 @@
           <input type="number" id="alerta-precio" value="{{ (mejor_ppu or mejor_precio or 0) + 1 }}" min="1" class="alerta-input" required>
         </div>
       </div>
-      <div class="alerta-tipo">
-        <label class="alerta-tipo-label">
-          <input type="radio" name="alerta-tipo" value="grupo" checked>
-          <span>Cualquier {{ grupo.marca }} {% if grupo.talla %}Talla {{ grupo.talla }}{% endif %} {% if grupo.cantidad %}{{ grupo.cantidad }}u{% endif %}</span>
-        </label>
-        <label class="alerta-tipo-label">
-          <input type="radio" name="alerta-tipo" value="producto">
-          <span>Solo la oferta m&aacute;s barata actual</span>
-        </label>
-      </div>
       <button class="btn-alerta" onclick="crearAlertaProducto()">Crear alerta de precio</button>
       <div class="alerta-mensaje" id="alertaMensaje" style="display:none;"></div>
     </div>
@@ -457,7 +447,7 @@
     function crearAlertaProducto() {
       var email = document.getElementById('alerta-email').value.trim();
       var precio = parseInt(document.getElementById('alerta-precio').value);
-      var tipo = document.querySelector('input[name="alerta-tipo"]:checked').value;
+      var tipo = 'grupo';
       var msg = document.getElementById('alertaMensaje');
 
       if (!email || !precio || precio <= 0) {
