@@ -394,7 +394,8 @@
               </td>
               <td>
                 <button class="btn-campana" title="Crear alerta de precio"
-                  onclick="abrirModalAlerta({{ {'nombre': p.nombre, 'precio': p.precio, 'ppu': p.precio_por_unidad, 'marca': p.marca_normalizada, 'talla': p.talla or '', 'cantidad': p.tamano_unidades or 0, 'categoria': p.categoria}|tojson|e }})">
+                  data-alerta='{{ {'nombre': p.nombre, 'precio': p.precio, 'ppu': p.precio_por_unidad, 'marca': p.marca_normalizada, 'talla': p.talla or '', 'cantidad': p.tamano_unidades or 0, 'categoria': p.categoria}|tojson }}'
+                  onclick="abrirModalAlerta(JSON.parse(this.dataset.alerta))">
                   &#128276;
                 </button>
               </td>
@@ -459,7 +460,8 @@
             </span>
             <span class="card-footer-actions">
               <button class="btn-campana" title="Crear alerta"
-                onclick="abrirModalAlerta({{ {'nombre': p.nombre, 'precio': p.precio, 'ppu': p.precio_por_unidad, 'marca': p.marca_normalizada, 'talla': p.talla or '', 'cantidad': p.tamano_unidades or 0, 'categoria': p.categoria}|tojson|e }})">
+                data-alerta='{{ {'nombre': p.nombre, 'precio': p.precio, 'ppu': p.precio_por_unidad, 'marca': p.marca_normalizada, 'talla': p.talla or '', 'cantidad': p.tamano_unidades or 0, 'categoria': p.categoria}|tojson }}'
+                onclick="abrirModalAlerta(JSON.parse(this.dataset.alerta))">
                 &#128276;
               </button>
               {% if p.url %}
