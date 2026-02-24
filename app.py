@@ -53,7 +53,10 @@ EXCLUIR_ADULTO = [
 PANALES_AGUA_KEYWORDS = ["swimmer", "agua", "acuatic", "piscina", "splasher"]
 
 # Palabras clave para detectar toallitas humedas de bebe
-TOALLITAS_KEYWORDS = ["toalla húmeda", "toallas húmedas", "toalla humeda", "toallas humedas", "toallita"]
+TOALLITAS_KEYWORDS = [
+    "toalla húmeda", "toallas húmedas", "toalla humeda", "toallas humedas",
+    "toallita", "toallas h\u00e3\u00bamedas",  # encoding corrupto (Liquimax)
+]
 
 # Palabras clave para detectar formulas infantiles
 FORMULAS_KEYWORDS = [
@@ -105,7 +108,7 @@ ORDEN_PERMITIDO = {
 CATEGORIAS_SLUG = {
     "panales": "Pañales",
     "panales-de-agua": "Pañales de Agua",
-    "toallitas": "Toallitas Humedas",
+    "toallitas": "Toallitas Húmedas",
     "formulas": "Fórmulas Infantiles",
 }
 
@@ -186,7 +189,7 @@ def normalizar_marca(marca):
 
 
 def detectar_categoria(nombre):
-    """Detecta la categoria del producto: Fórmulas Infantiles, Toallitas Humedas, Pañales de Agua, o Pañales."""
+    """Detecta la categoria del producto: Fórmulas Infantiles, Toallitas Húmedas, Pañales de Agua, o Pañales."""
     if not nombre:
         return "Pañales"
     nombre_lower = nombre.lower()
@@ -195,7 +198,7 @@ def detectar_categoria(nombre):
             return "Fórmulas Infantiles"
     for keyword in TOALLITAS_KEYWORDS:
         if keyword in nombre_lower:
-            return "Toallitas Humedas"
+            return "Toallitas Húmedas"
     for keyword in PANALES_AGUA_KEYWORDS:
         if keyword in nombre_lower:
             return "Pañales de Agua"
@@ -357,8 +360,8 @@ def obtener_opciones_filtros():
             tallas_por_marca[m] = sorted(tallas_set, key=orden_talla)
         tallas_por_marca[""] = sorted(todas_tallas, key=orden_talla)
 
-        # Para Toallitas Humedas y Fórmulas Infantiles, no hay tallas
-        if cat in ("Toallitas Humedas", "Fórmulas Infantiles"):
+        # Para Toallitas Húmedas y Fórmulas Infantiles, no hay tallas
+        if cat in ("Toallitas Húmedas", "Fórmulas Infantiles"):
             tallas_por_marca = {}
 
         cat_opciones = {

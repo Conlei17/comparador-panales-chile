@@ -118,7 +118,7 @@
             <option value="">Todas</option>
             <option value="Pa&ntilde;ales" {% if categoria_sel == 'Pañales' %}selected{% endif %}>Pa&ntilde;ales</option>
             <option value="Pa&ntilde;ales de Agua" {% if categoria_sel == 'Pañales de Agua' %}selected{% endif %}>Pa&ntilde;ales de Agua</option>
-            <option value="Toallitas Humedas" {% if categoria_sel == 'Toallitas Humedas' %}selected{% endif %}>Toallitas H&uacute;medas</option>
+            <option value="Toallitas Húmedas" {% if categoria_sel == 'Toallitas Húmedas' %}selected{% endif %}>Toallitas H&uacute;medas</option>
             <option value="Fórmulas Infantiles" {% if categoria_sel == 'Fórmulas Infantiles' %}selected{% endif %}>F&oacute;rmulas Infantiles</option>
           </select>
         </div>
@@ -597,7 +597,7 @@
           var marca = marcaSelect.value;
           var productosDisponibles = (datos.productos_por_marca && datos.productos_por_marca[marca]) || datos.productos_por_marca[''] || [];
           repoblarSelect(productoSelect, productosDisponibles, mantenerProducto ? undefined : null, 'Todos los productos');
-        } else if (cat === 'Toallitas Humedas') {
+        } else if (cat === 'Toallitas Húmedas') {
           tallaGrupo.style.display = 'none';
           tallaSelect.value = '';
           productoGrupo.style.display = 'none';
@@ -890,7 +890,7 @@
     (function() {
       var form = document.getElementById('formBuscar');
       if (!form) return;
-      var catSlugMap = {"Pa\u00f1ales": "panales", "Pa\u00f1ales de Agua": "panales-de-agua", "Toallitas Humedas": "toallitas", "F\u00f3rmulas Infantiles": "formulas"};
+      var catSlugMap = {"Pa\u00f1ales": "panales", "Pa\u00f1ales de Agua": "panales-de-agua", "Toallitas Húmedas": "toallitas", "F\u00f3rmulas Infantiles": "formulas"};
       var slugifyMap = {};
       {% for marca in marcas %}
       slugifyMap["{{ marca }}"] = "{{ slugify(marca) }}";
