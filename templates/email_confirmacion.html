@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin:0;padding:0;background-color:#fdf8f4;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#fdf8f4;padding:24px 0;">
+    <tr>
+      <td align="center">
+        <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,0.04);">
+          <!-- Header -->
+          <tr>
+            <td style="background:linear-gradient(135deg,#f4b8a8,#d4b8e8);padding:24px;text-align:center;">
+              <div style="font-size:22px;font-weight:800;color:#fff;font-family:'Nunito',sans-serif;">BabyAhorro</div>
+              <div style="color:rgba(255,255,255,0.85);font-size:12px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;margin-top:4px;">Ahorro real para familias reales</div>
+            </td>
+          </tr>
+          <!-- Body -->
+          <tr>
+            <td style="padding:32px 24px;">
+              <h2 style="font-size:20px;color:#4a4a4a;margin:0 0 16px;font-family:'Nunito',sans-serif;">Confirma tu alerta de precio</h2>
+              <p style="font-size:15px;color:#6b6b6b;line-height:1.6;margin:0 0 20px;">
+                Recibimos tu solicitud para avisarte cuando baje el precio de:
+              </p>
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#fef6f0;border-radius:10px;padding:16px;margin-bottom:24px;">
+                <tr>
+                  <td style="padding:16px;">
+                    <div style="font-size:16px;font-weight:700;color:#4a4a4a;margin-bottom:6px;">{{ nombre_display }}</div>
+                    <div style="font-size:14px;color:#6b6b6b;">Precio objetivo: <strong style="color:#3a8a55;">{{ precio_objetivo }}</strong></div>
+                  </td>
+                </tr>
+              </table>
+              <p style="font-size:15px;color:#6b6b6b;line-height:1.6;margin:0 0 24px;">
+                Haz click en el boton para activar tu alerta:
+              </p>
+              <table cellpadding="0" cellspacing="0" style="margin:0 auto;">
+                <tr>
+                  <td align="center" style="background:linear-gradient(135deg,#e8a898,#b8a8d8);border-radius:10px;">
+                    <a href="{{ link_confirmar }}" style="display:inline-block;padding:14px 36px;color:#fff;text-decoration:none;font-size:16px;font-weight:700;">
+                      Confirmar alerta
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <!-- Footer -->
+          <tr>
+            <td style="padding:16px 24px;text-align:center;border-top:1px solid #f5f0ea;">
+              <p style="font-size:12px;color:#aaa;margin:0;">
+                Si no solicitaste esta alerta, puedes ignorar este email.
+              </p>
+              <p style="font-size:12px;color:#bbb;margin:8px 0 0;">
+                BabyAhorro &middot; Comparador de precios de panales en Chile
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

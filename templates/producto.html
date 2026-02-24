@@ -142,6 +142,34 @@
       </div>
     </div>
 
+    <!-- Alerta de precio -->
+    <div class="alerta-form" id="alertaForm">
+      <h2 class="seccion-titulo">Crear alerta de precio</h2>
+      <p class="alerta-desc">Te avisamos por email cuando baje el precio.</p>
+      <div class="alerta-inputs">
+        <div class="filtro-grupo">
+          <label for="alerta-email">Email</label>
+          <input type="email" id="alerta-email" placeholder="tu@email.com" class="alerta-input" required>
+        </div>
+        <div class="filtro-grupo">
+          <label for="alerta-precio">Precio objetivo ($/unidad)</label>
+          <input type="number" id="alerta-precio" value="{{ (mejor_ppu or mejor_precio or 0) + 1 }}" min="1" class="alerta-input" required>
+        </div>
+      </div>
+      <div class="alerta-tipo">
+        <label class="alerta-tipo-label">
+          <input type="radio" name="alerta-tipo" value="grupo" checked>
+          <span>Cualquier {{ grupo.marca }} {% if grupo.talla %}Talla {{ grupo.talla }}{% endif %} {% if grupo.cantidad %}{{ grupo.cantidad }}u{% endif %}</span>
+        </label>
+        <label class="alerta-tipo-label">
+          <input type="radio" name="alerta-tipo" value="producto">
+          <span>Solo la oferta m&aacute;s barata actual</span>
+        </label>
+      </div>
+      <button class="btn-alerta" onclick="crearAlertaProducto()">Crear alerta</button>
+      <div class="alerta-mensaje" id="alertaMensaje" style="display:none;"></div>
+    </div>
+
     <!-- Tabla de precios (desktop) -->
     {% if ofertas %}
     <h2 class="seccion-titulo">Comparar precios por tienda</h2>
@@ -369,6 +397,60 @@
     })();
   </script>
   {% endif %}
+
+  <script>
+    function crearAlertaProducto() {
+      var email = document.getElementById('alerta-email').value.trim();
+      var precio = parseInt(document.getElementById('alerta-precio').value);
+      var tipo = document.querySelector('input[name="alerta-tipo"]:checked').value;
+      var msg = document.getElementById('alertaMensaje');
+
+      if (!email || !precio || precio <= 0) {
+        msg.textContent = 'Completa email y precio.';
+        msg.className = 'alerta-mensaje alerta-mensaje--error';
+        msg.style.display = 'block';
+        return;
+      }
+
+      var body = {
+        email: email,
+        precio_objetivo: precio,
+        tipo: tipo,
+        nombre_display: {{ grupo.nombre|tojson }},
+        marca: {{ grupo.marca|tojson }},
+        talla: {{ (grupo.talla or "")|tojson }},
+        cantidad: {{ grupo.cantidad|tojson }},
+        categoria: {{ grupo.categoria|tojson }}
+      };
+
+      if (tipo === 'producto') {
+        body.producto_id = {{ grupo.ids[0] if grupo.ids else 'null' }};
+      }
+
+      fetch('/api/alerta/suscribir', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(body)
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.ok) {
+          msg.textContent = 'Revisa tu email para confirmar la alerta.';
+          msg.className = 'alerta-mensaje alerta-mensaje--ok';
+          gtag('event', 'crear_alerta', {tipo: tipo, producto: {{ grupo.nombre|tojson }}});
+        } else {
+          msg.textContent = data.error || 'Error al crear alerta.';
+          msg.className = 'alerta-mensaje alerta-mensaje--error';
+        }
+        msg.style.display = 'block';
+      })
+      .catch(function() {
+        msg.textContent = 'Error de conexion.';
+        msg.className = 'alerta-mensaje alerta-mensaje--error';
+        msg.style.display = 'block';
+      });
+    }
+  </script>
 
   <script>
     if ('serviceWorker' in navigator) {

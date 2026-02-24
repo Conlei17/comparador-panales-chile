@@ -1586,6 +1586,151 @@ body.dark .checkbox-label input[type="checkbox"]:checked + .chip {
   margin-top: 2rem;
 }
 
+/* --- Alerta de precio --- */
+.alerta-form {
+  background: var(--bg-surface);
+  border-radius: 16px;
+  padding: 1.25rem;
+  margin-bottom: 1.25rem;
+  box-shadow: 0 4px 16px var(--shadow);
+  border: 1px solid var(--border-lighter);
+}
+
+.alerta-desc {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 0.75rem;
+}
+
+.alerta-inputs {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.alerta-input {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border: 2px solid var(--text-lighter);
+  border-radius: 10px;
+  font-size: 1rem;
+  color: var(--text-primary);
+  background-color: var(--bg-input);
+  transition: border-color 0.2s;
+}
+
+.alerta-input:focus {
+  outline: none;
+  border-color: var(--accent-pink);
+}
+
+.alerta-tipo {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.alerta-tipo-label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.alerta-tipo-label input[type="radio"] {
+  accent-color: var(--accent-pink);
+}
+
+.btn-alerta {
+  padding: 0.7rem 1.75rem;
+  background: linear-gradient(135deg, var(--gradient-btn-start), var(--gradient-btn-end));
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.btn-alerta:hover {
+  opacity: 0.9;
+}
+
+.alerta-mensaje {
+  margin-top: 0.75rem;
+  padding: 0.6rem 1rem;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.alerta-mensaje--ok {
+  background: var(--best-bg);
+  color: var(--best-green);
+  border: 1px solid var(--best-border);
+}
+
+.alerta-mensaje--error {
+  background: var(--worst-bg);
+  color: var(--worst-red);
+  border: 1px solid var(--worst-border);
+}
+
+/* --- Alerta modal (index) --- */
+.alerta-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 2000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1rem;
+}
+
+.alerta-modal-contenido {
+  background: var(--bg-surface);
+  border-radius: 16px;
+  max-width: 480px;
+  width: 100%;
+  padding: 1.5rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+/* --- Boton campana --- */
+.btn-campana {
+  background: transparent;
+  border: 1.5px solid var(--border-light);
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, border-color 0.2s;
+  padding: 0;
+  line-height: 1;
+}
+
+.btn-campana:hover {
+  border-color: var(--accent-pink);
+  background: rgba(232, 168, 152, 0.1);
+}
+
+.card-footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+table col.col-w-campana { width: 40px; }
+
 /* --- Responsive: movil --- */
 @media (max-width: 640px) {
   .header-logo {
@@ -1715,5 +1860,19 @@ body.dark .checkbox-label input[type="checkbox"]:checked + .chip {
   .comparar-bar-btn {
     padding: 0.4rem 1rem;
     font-size: 0.85rem;
+  }
+
+  /* Alerta form responsive */
+  .alerta-inputs {
+    flex-direction: column;
+  }
+
+  .alerta-tipo {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .btn-alerta {
+    width: 100%;
   }
 }

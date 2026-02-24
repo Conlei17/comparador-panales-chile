@@ -20,6 +20,8 @@ import unicodedata
 from collections import defaultdict
 from flask import Flask, render_template, request, jsonify, Response, redirect, abort
 from urllib.parse import urlencode, urljoin
+from alertas import (inicializar_alertas, crear_alerta, confirmar_alerta,
+                     cancelar_alerta, enviar_email_confirmacion, validar_email)
 
 # --- CONFIGURACION ---
 
@@ -1295,6 +1297,81 @@ def sitemap_xml():
     xml_parts.append("</urlset>")
 
     return Response("\n".join(xml_parts), mimetype="application/xml")
+
+
+# =============================================================
+# ALERTAS DE PRECIO
+# =============================================================
+
+# Inicializar tablas de alertas al arrancar
+inicializar_alertas(ARCHIVO_DB)
+
+
+@app.route("/api/alerta/suscribir", methods=["POST"])
+def alerta_suscribir():
+    """Crea una nueva alerta de precio."""
+    data = request.get_json()
+    if not data:
+        return jsonify({"ok": False, "error": "Datos invalidos"}), 400
+
+    email = (data.get("email") or "").strip()
+    if not email or not validar_email(email):
+        return jsonify({"ok": False, "error": "Email invalido"}), 400
+
+    precio_objetivo = data.get("precio_objetivo")
+    if not precio_objetivo or not isinstance(precio_objetivo, (int, float)) or precio_objetivo <= 0:
+        return jsonify({"ok": False, "error": "Precio objetivo invalido"}), 400
+    precio_objetivo = int(precio_objetivo)
+
+    tipo = data.get("tipo", "producto")
+    if tipo not in ("producto", "grupo"):
+        return jsonify({"ok": False, "error": "Tipo invalido"}), 400
+
+    nombre_display = data.get("nombre_display", "Producto")
+
+    token = crear_alerta(
+        db_path=ARCHIVO_DB,
+        email=email,
+        tipo=tipo,
+        precio_objetivo=precio_objetivo,
+        nombre_display=nombre_display,
+        producto_id=data.get("producto_id"),
+        marca=data.get("marca"),
+        talla=data.get("talla"),
+        cantidad=data.get("cantidad"),
+        categoria=data.get("categoria"),
+    )
+
+    enviar_email_confirmacion(token, email, nombre_display, precio_objetivo)
+
+    return jsonify({"ok": True})
+
+
+@app.route("/alerta/confirmar/<token>/")
+def alerta_confirmar(token):
+    """Confirma una alerta de precio."""
+    alerta = confirmar_alerta(ARCHIVO_DB, token)
+    if not alerta:
+        abort(404)
+
+    precio_fmt = f"${alerta['precio_objetivo']:,}".replace(",", ".")
+    return render_template("alerta_estado.html",
+                           estado="confirmada",
+                           alerta=alerta,
+                           precio_fmt=precio_fmt)
+
+
+@app.route("/alerta/cancelar/<token>/")
+def alerta_cancelar(token):
+    """Cancela una alerta de precio."""
+    alerta = cancelar_alerta(ARCHIVO_DB, token)
+    if not alerta:
+        abort(404)
+
+    return render_template("alerta_estado.html",
+                           estado="cancelada",
+                           alerta=alerta,
+                           precio_fmt="")
 
 
 if __name__ == "__main__":
