@@ -280,6 +280,59 @@
     </div>
     {% endif %}
 
+    <!-- Otras presentaciones -->
+    {% if otras_presentaciones %}
+    <h2 class="seccion-titulo">Otras presentaciones de {{ grupo.marca }}{% if grupo.talla %} Talla {{ grupo.talla }}{% endif %}</h2>
+    <div class="otras-presentaciones">
+      <!-- Desktop -->
+      <div class="tabla-wrapper">
+        <table class="tabla-otras">
+          <thead>
+            <tr>
+              <th>Cantidad</th>
+              <th>Mejor precio</th>
+              <th>Precio/Unidad</th>
+              <th>Tiendas</th>
+              <th>Ver</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in otras_presentaciones %}
+            <tr>
+              <td><strong>{{ p.cantidad }} unidades</strong></td>
+              <td>{{ p.mejor_precio|precio }}</td>
+              <td class="col-ppu">{{ p.mejor_ppu|precio }}</td>
+              <td>{{ p.num_tiendas }} tienda{{ 's' if p.num_tiendas != 1 else '' }}</td>
+              <td><a href="{{ p.url }}" class="link-tienda">Ver &rarr;</a></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <!-- Movil -->
+      <div class="cards">
+        {% for p in otras_presentaciones %}
+        <a href="{{ p.url }}" class="card otras-card">
+          <div class="card-body" style="grid-template-columns: 1fr 1fr 1fr;">
+            <div>
+              <div class="card-label">Cantidad</div>
+              <div class="card-value"><strong>{{ p.cantidad }}u</strong></div>
+            </div>
+            <div>
+              <div class="card-label">Mejor PPU</div>
+              <div class="card-ppu">{{ p.mejor_ppu|precio }}</div>
+            </div>
+            <div>
+              <div class="card-label">Tiendas</div>
+              <div class="card-value">{{ p.num_tiendas }}</div>
+            </div>
+          </div>
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
     <!-- Grafico historico -->
     {% if historico_por_tienda %}
     <h2 class="seccion-titulo">Hist&oacute;rico de precios</h2>

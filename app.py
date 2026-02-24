@@ -1075,6 +1075,36 @@ def producto_detalle(cat_slug, marca_slug, producto_slug):
             por_fecha[fecha] = d
         historico_por_tienda[tienda] = [por_fecha[f] for f in sorted(por_fecha.keys())]
 
+    # Otras presentaciones (misma marca+talla, distinta cantidad)
+    grupos, _ = obtener_productos_agrupados()
+    otras_presentaciones = []
+    marca_lower = grupo["marca"].lower()
+    talla_actual = grupo["talla"]
+    cantidad_actual = grupo["cantidad"]
+
+    for key, g in grupos.items():
+        g_marca, g_talla, g_cantidad = key
+        if (g_marca == marca_lower and g_talla == (talla_actual or "")
+                and g_cantidad != (cantidad_actual or 0)
+                and g["cat_slug"] == cat_slug):
+            # Calcular mejor PPU y precio de este grupo
+            ofertas_g = sorted(g["ofertas"], key=lambda o: (
+                0 if o.get("precio_por_unidad") else 1,
+                o.get("precio_por_unidad") or 0,
+                o.get("precio") or 0,
+            ))
+            mejor = ofertas_g[0] if ofertas_g else None
+            if mejor:
+                otras_presentaciones.append({
+                    "cantidad": g_cantidad,
+                    "mejor_precio": mejor.get("precio"),
+                    "mejor_ppu": mejor.get("precio_por_unidad"),
+                    "num_tiendas": len(set(o["tienda"] for o in ofertas_g)),
+                    "url": f"/{g['cat_slug']}/{g['marca_slug']}/producto/{g['slug']}/",
+                })
+
+    otras_presentaciones.sort(key=lambda p: p.get("mejor_ppu") or 999999)
+
     # SEO
     nombre = grupo["nombre"]
     talla_str = f" Talla {grupo['talla']}" if grupo["talla"] else ""
@@ -1107,6 +1137,7 @@ def producto_detalle(cat_slug, marca_slug, producto_slug):
         categoria=categoria,
         marca=marca,
         logos_tiendas=LOGOS_TIENDAS,
+        otras_presentaciones=otras_presentaciones,
     )
 
 

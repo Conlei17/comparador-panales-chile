@@ -1586,6 +1586,26 @@ body.dark .checkbox-label input[type="checkbox"]:checked + .chip {
   margin-top: 2rem;
 }
 
+/* --- Otras presentaciones --- */
+.otras-presentaciones {
+  margin-bottom: 1.25rem;
+}
+
+.tabla-otras {
+  table-layout: auto;
+}
+
+.otras-card {
+  text-decoration: none;
+  color: var(--text-primary);
+  display: block;
+  transition: border-color 0.2s;
+}
+
+.otras-card:hover {
+  border-color: var(--accent-pink);
+}
+
 /* --- Alerta de precio --- */
 .alerta-form {
   background: var(--bg-surface);
