@@ -24,10 +24,13 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Instalar dependencias de scrapers
-        run: pip install requests beautifulsoup4 lxml
+      - name: Instalar dependencias
+        run: pip install requests beautifulsoup4 lxml flask resend
 
       - name: Ejecutar scrapers
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          BASE_URL: "https://babyahorro.cl"
         run: python main.py
 
       - name: Commit y push de precios.db actualizada
