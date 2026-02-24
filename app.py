@@ -958,6 +958,37 @@ def index():
     return _render_index()
 
 
+# --- RUTAS DE ALERTAS ---
+# Deben ir ANTES de las rutas catch-all (/<cat_slug>/, etc.)
+# para que Flask no las confunda con slugs de categoria/marca/talla.
+
+@app.route("/alerta/confirmar/<token>/")
+def alerta_confirmar(token):
+    """Confirma una alerta de precio."""
+    alerta = confirmar_alerta(ARCHIVO_DB, token)
+    if not alerta:
+        abort(404)
+
+    precio_fmt = f"${alerta['precio_objetivo']:,}".replace(",", ".")
+    return render_template("alerta_estado.html",
+                           estado="confirmada",
+                           alerta=alerta,
+                           precio_fmt=precio_fmt)
+
+
+@app.route("/alerta/cancelar/<token>/")
+def alerta_cancelar(token):
+    """Cancela una alerta de precio."""
+    alerta = cancelar_alerta(ARCHIVO_DB, token)
+    if not alerta:
+        abort(404)
+
+    return render_template("alerta_estado.html",
+                           estado="cancelada",
+                           alerta=alerta,
+                           precio_fmt="")
+
+
 @app.route("/<cat_slug>/")
 def index_categoria(cat_slug):
     """URL amigable por categoria: /panales/, /toallitas/, /formulas/"""
@@ -1379,33 +1410,6 @@ def alerta_suscribir():
     enviar_email_confirmacion(token, email, nombre_display, precio_objetivo)
 
     return jsonify({"ok": True})
-
-
-@app.route("/alerta/confirmar/<token>/")
-def alerta_confirmar(token):
-    """Confirma una alerta de precio."""
-    alerta = confirmar_alerta(ARCHIVO_DB, token)
-    if not alerta:
-        abort(404)
-
-    precio_fmt = f"${alerta['precio_objetivo']:,}".replace(",", ".")
-    return render_template("alerta_estado.html",
-                           estado="confirmada",
-                           alerta=alerta,
-                           precio_fmt=precio_fmt)
-
-
-@app.route("/alerta/cancelar/<token>/")
-def alerta_cancelar(token):
-    """Cancela una alerta de precio."""
-    alerta = cancelar_alerta(ARCHIVO_DB, token)
-    if not alerta:
-        abort(404)
-
-    return render_template("alerta_estado.html",
-                           estado="cancelada",
-                           alerta=alerta,
-                           precio_fmt="")
 
 
 if __name__ == "__main__":
