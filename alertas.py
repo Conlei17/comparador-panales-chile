@@ -23,7 +23,7 @@ DIR_PROYECTO = os.path.dirname(os.path.abspath(__file__))
 ARCHIVO_DB = os.path.join(DIR_PROYECTO, "data", "precios.db")
 
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
-EMAIL_FROM = "alertas@babyahorro.cl"
+EMAIL_FROM = "Alertas BabyAhorro <alertas@babyahorro.cl>"
 BASE_URL = os.environ.get("BASE_URL", "https://babyahorro.cl")
 
 
@@ -164,11 +164,16 @@ def enviar_email_confirmacion(token, email, nombre_display, precio_objetivo):
         """
 
     try:
+        link_cancelar = f"{BASE_URL}/alerta/cancelar/{token}/"
         resend.Emails.send({
             "from": EMAIL_FROM,
             "to": [email],
             "subject": f"Confirma tu alerta - {nombre_display}",
             "html": html,
+            "headers": {
+                "List-Unsubscribe": f"<{link_cancelar}>",
+                "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+            },
         })
         return True
     except Exception as e:
@@ -223,6 +228,10 @@ def enviar_email_alerta(alerta, precio_actual, tienda, nombre_producto,
             "to": [alerta["email"]],
             "subject": f"{nombre_producto} bajo a {precio_fmt}!",
             "html": html,
+            "headers": {
+                "List-Unsubscribe": f"<{link_cancelar}>",
+                "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+            },
         })
         return True
     except Exception as e:
