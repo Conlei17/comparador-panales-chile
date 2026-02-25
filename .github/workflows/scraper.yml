@@ -25,19 +25,34 @@ jobs:
           python-version: '3.12'
 
       - name: Instalar dependencias
-        run: pip install requests beautifulsoup4 lxml flask resend
+        run: pip install requests beautifulsoup4 lxml
 
       - name: Ejecutar scrapers
-        env:
-          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
-          BASE_URL: "https://babyahorro.cl"
         run: python main.py
 
-      - name: Commit y push de precios.db actualizada
+      - name: Push precios.db a rama data
         run: |
+          # Guardar precios.db fuera del workspace antes de cambiar de rama
+          cp data/precios.db /tmp/precios.db
+
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Verificar si la rama data existe en el remote
+          if git ls-remote --exit-code --heads origin data > /dev/null 2>&1; then
+            git fetch origin data
+            git checkout data
+          else
+            # Crear rama orphan (sin historial de main)
+            git checkout --orphan data
+            git rm -rf .
+          fi
+
+          # Restaurar precios.db
+          mkdir -p data
+          cp /tmp/precios.db data/precios.db
+
           git add data/precios.db
           # Solo commitear si hay cambios
           git diff --staged --quiet || git commit -m "Actualizar precios $(date -u +%Y-%m-%d)"
-          git push
+          git push origin data

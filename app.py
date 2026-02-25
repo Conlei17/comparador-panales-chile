@@ -15,18 +15,68 @@ import json
 import os
 import re
 import sqlite3
+import threading
 import time
 import unicodedata
 from collections import defaultdict
 from flask import Flask, render_template, request, jsonify, Response, redirect, abort
 from urllib.parse import urlencode, urljoin
 from alertas import (inicializar_alertas, crear_alerta, confirmar_alerta,
-                     cancelar_alerta, enviar_email_confirmacion, validar_email)
+                     cancelar_alerta, enviar_email_confirmacion, validar_email,
+                     verificar_alertas, ARCHIVO_ALERTAS_DB)
 
 # --- CONFIGURACION ---
 
 DIR_PROYECTO = os.path.dirname(os.path.abspath(__file__))
 ARCHIVO_DB = os.path.join(DIR_PROYECTO, "data", "precios.db")
+
+PRECIOS_DB_URL = "https://raw.githubusercontent.com/Conlei17/comparador-panales-chile/data/data/precios.db"
+REFRESH_INTERVAL = 4 * 3600  # 4 horas
+
+
+def descargar_precios_db():
+    """Descarga precios.db desde la rama data de GitHub."""
+    import requests
+    try:
+        print("[Startup] Descargando precios.db desde GitHub...")
+        resp = requests.get(PRECIOS_DB_URL, timeout=30)
+        resp.raise_for_status()
+        os.makedirs(os.path.dirname(ARCHIVO_DB), exist_ok=True)
+        with open(ARCHIVO_DB, "wb") as f:
+            f.write(resp.content)
+        print(f"[Startup] precios.db descargada ({len(resp.content)} bytes)")
+        return True
+    except Exception as e:
+        print(f"[Startup] Error descargando precios.db: {e}")
+        if os.path.exists(ARCHIVO_DB):
+            print("[Startup] Usando precios.db local existente")
+        return False
+
+
+def _refresh_loop():
+    """Thread daemon que re-descarga precios.db y verifica alertas periodicamente."""
+    while True:
+        time.sleep(REFRESH_INTERVAL)
+        try:
+            print("[Refresh] Re-descargando precios.db...")
+            descargar_precios_db()
+            print("[Refresh] Verificando alertas...")
+            verificar_alertas(ARCHIVO_DB, ARCHIVO_ALERTAS_DB)
+        except Exception as e:
+            print(f"[Refresh] Error: {e}")
+
+
+# --- Startup: descargar precios y verificar alertas ---
+descargar_precios_db()
+try:
+    print("[Startup] Verificando alertas...")
+    verificar_alertas(ARCHIVO_DB, ARCHIVO_ALERTAS_DB)
+except Exception as e:
+    print(f"[Startup] Error verificando alertas: {e}")
+
+# Thread de refresh periodico
+_refresh_thread = threading.Thread(target=_refresh_loop, daemon=True)
+_refresh_thread.start()
 
 app = Flask(__name__)
 
@@ -965,7 +1015,7 @@ def index():
 @app.route("/alerta/confirmar/<token>/")
 def alerta_confirmar(token):
     """Confirma una alerta de precio."""
-    alerta = confirmar_alerta(ARCHIVO_DB, token)
+    alerta = confirmar_alerta(ARCHIVO_ALERTAS_DB, token)
     if not alerta:
         abort(404)
 
@@ -979,7 +1029,7 @@ def alerta_confirmar(token):
 @app.route("/alerta/cancelar/<token>/")
 def alerta_cancelar(token):
     """Cancela una alerta de precio."""
-    alerta = cancelar_alerta(ARCHIVO_DB, token)
+    alerta = cancelar_alerta(ARCHIVO_ALERTAS_DB, token)
     if not alerta:
         abort(404)
 
@@ -1369,7 +1419,7 @@ def sitemap_xml():
 # =============================================================
 
 # Inicializar tablas de alertas al arrancar
-inicializar_alertas(ARCHIVO_DB)
+inicializar_alertas(ARCHIVO_ALERTAS_DB)
 
 
 @app.route("/api/alerta/suscribir", methods=["POST"])
@@ -1395,7 +1445,7 @@ def alerta_suscribir():
     nombre_display = data.get("nombre_display", "Producto")
 
     token = crear_alerta(
-        db_path=ARCHIVO_DB,
+        db_path=ARCHIVO_ALERTAS_DB,
         email=email,
         tipo=tipo,
         precio_objetivo=precio_objetivo,

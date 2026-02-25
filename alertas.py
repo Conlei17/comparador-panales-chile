@@ -17,19 +17,44 @@ try:
 except ImportError:
     resend = None
 
-from flask import render_template
-
 DIR_PROYECTO = os.path.dirname(os.path.abspath(__file__))
-ARCHIVO_DB = os.path.join(DIR_PROYECTO, "data", "precios.db")
+ARCHIVO_ALERTAS_DB = os.path.join(DIR_PROYECTO, "data", "alertas.db")
 
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
 EMAIL_FROM = "Alertas BabyAhorro <alertas@babyahorro.cl>"
 BASE_URL = os.environ.get("BASE_URL", "https://babyahorro.cl")
 
 
+def detectar_talla(nombre):
+    """Extrae la talla de un producto a partir de su nombre."""
+    if not nombre:
+        return None
+
+    nombre_upper = nombre.upper()
+
+    match = re.search(r"TALLA\s+(RN\+?|S[/-]?M|P|M|G|XG|XXG|XXXG|L[/-]?XL)", nombre_upper)
+    if match:
+        return match.group(1).replace("/", "-")
+
+    match = re.search(r"(?:PREMIUM|COMFORT|CARE|SEC|COOL|PLUS)\s+(RN\+?|P|M|G|XG|XXG|XXXG)\b", nombre_upper)
+    if match:
+        return match.group(1)
+
+    match = re.search(r"PANTS\s+(RN|P|M|G|XG|XXG|XXXG|P[/-]M|G[/-]XG)\b", nombre_upper)
+    if match:
+        return match.group(1).replace("/", "-")
+
+    match = re.search(r"ADULTO\s+.*?(M|G|L|XG|XL)\b", nombre_upper)
+    if match:
+        return match.group(1)
+
+    return None
+
+
 def inicializar_alertas(db_path=None):
     """Crea las tablas de alertas si no existen."""
-    db = db_path or ARCHIVO_DB
+    db = db_path or ARCHIVO_ALERTAS_DB
+    os.makedirs(os.path.dirname(db), exist_ok=True)
     conn = sqlite3.connect(db)
     cursor = conn.cursor()
 
@@ -48,8 +73,7 @@ def inicializar_alertas(db_path=None):
             token TEXT NOT NULL UNIQUE,
             confirmada INTEGER DEFAULT 0,
             activa INTEGER DEFAULT 1,
-            fecha_creacion TEXT NOT NULL,
-            FOREIGN KEY (producto_id) REFERENCES productos(id)
+            fecha_creacion TEXT NOT NULL
         )
     """)
 
@@ -77,7 +101,7 @@ def crear_alerta(db_path, email, tipo, precio_objetivo, nombre_display,
                  producto_id=None, marca=None, talla=None, cantidad=None,
                  categoria=None):
     """Crea una alerta pendiente de confirmacion. Retorna el token."""
-    db = db_path or ARCHIVO_DB
+    db = db_path or ARCHIVO_ALERTAS_DB
     token = str(uuid.uuid4())
     ahora = datetime.now().isoformat()
 
@@ -98,7 +122,7 @@ def crear_alerta(db_path, email, tipo, precio_objetivo, nombre_display,
 
 def confirmar_alerta(db_path, token):
     """Marca una alerta como confirmada. Retorna dict con datos o None."""
-    db = db_path or ARCHIVO_DB
+    db = db_path or ARCHIVO_ALERTAS_DB
     conn = sqlite3.connect(db)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
@@ -119,7 +143,7 @@ def confirmar_alerta(db_path, token):
 
 def cancelar_alerta(db_path, token):
     """Desactiva una alerta. Retorna dict con datos o None."""
-    db = db_path or ARCHIVO_DB
+    db = db_path or ARCHIVO_ALERTAS_DB
     conn = sqlite3.connect(db)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
@@ -150,6 +174,7 @@ def enviar_email_confirmacion(token, email, nombre_display, precio_objetivo):
     precio_fmt = f"${precio_objetivo:,}".replace(",", ".")
 
     try:
+        from flask import render_template
         html = render_template("email_confirmacion.html",
                                nombre_display=nombre_display,
                                precio_objetivo=precio_fmt,
@@ -207,6 +232,7 @@ def enviar_email_alerta(alerta, precio_actual, tienda, nombre_producto,
         link_tienda_utm = f"{url_tienda}{sep}utm_source=babyahorro&utm_medium=referral&utm_campaign=alerta"
 
     try:
+        from flask import render_template
         html = render_template("email_alerta.html",
                                nombre=nombre_producto,
                                precio=precio_fmt,
@@ -239,37 +265,45 @@ def enviar_email_alerta(alerta, precio_actual, tienda, nombre_producto,
         return False
 
 
-def verificar_alertas(db_path=None):
+def verificar_alertas(precios_db_path, alertas_db_path=None):
     """
     Verifica alertas activas y confirmadas contra precios actuales.
     Envia emails cuando el precio baja del objetivo.
-    Llamar despues de cada scraping.
-    """
-    db = db_path or ARCHIVO_DB
-    inicializar_alertas(db)
 
-    conn = sqlite3.connect(db)
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
+    Lee precios de precios_db_path y lee/escribe alertas en alertas_db_path.
+    """
+    alertas_db = alertas_db_path or ARCHIVO_ALERTAS_DB
+    inicializar_alertas(alertas_db)
+
+    # Conexion a alertas DB
+    conn_alertas = sqlite3.connect(alertas_db)
+    conn_alertas.row_factory = sqlite3.Row
+    cursor_alertas = conn_alertas.cursor()
 
     # Obtener alertas activas y confirmadas
-    cursor.execute("""
+    cursor_alertas.execute("""
         SELECT * FROM alertas
         WHERE confirmada = 1 AND activa = 1
     """)
-    alertas = [dict(row) for row in cursor.fetchall()]
+    alertas = [dict(row) for row in cursor_alertas.fetchall()]
 
     if not alertas:
         print("    [Alertas] No hay alertas activas")
-        conn.close()
+        conn_alertas.close()
         return
 
+    # Conexion a precios DB (solo lectura)
+    conn_precios = sqlite3.connect(f"file:{precios_db_path}?mode=ro", uri=True)
+    conn_precios.row_factory = sqlite3.Row
+    cursor_precios = conn_precios.cursor()
+
     # Obtener ultima fecha de scraping
-    cursor.execute("SELECT MAX(fecha_scraping) FROM precios")
-    ultima_fecha = cursor.fetchone()[0]
+    cursor_precios.execute("SELECT MAX(fecha_scraping) FROM precios")
+    ultima_fecha = cursor_precios.fetchone()[0]
     if not ultima_fecha:
         print("    [Alertas] No hay datos de precios")
-        conn.close()
+        conn_precios.close()
+        conn_alertas.close()
         return
 
     ahora = datetime.now()
@@ -282,11 +316,11 @@ def verificar_alertas(db_path=None):
         total_verificadas += 1
 
         # Verificar si ya se envio en las ultimas 24h
-        cursor.execute("""
+        cursor_alertas.execute("""
             SELECT COUNT(*) FROM alertas_enviadas
             WHERE alerta_id = ? AND fecha_envio > ?
         """, (alerta["id"], hace_24h))
-        ya_enviada = cursor.fetchone()[0] > 0
+        ya_enviada = cursor_alertas.fetchone()[0] > 0
         if ya_enviada:
             continue
 
@@ -294,11 +328,10 @@ def verificar_alertas(db_path=None):
         tienda = None
         nombre_producto = None
         url_tienda = None
-        url_producto_page = None
 
         if alerta["tipo"] == "producto" and alerta["producto_id"]:
             # Buscar precio actual del producto especifico
-            cursor.execute("""
+            cursor_precios.execute("""
                 SELECT pr.precio, pr.precio_por_unidad, t.nombre as tienda,
                        p.nombre, p.url, p.marca, p.tamano_unidades
                 FROM precios pr
@@ -308,7 +341,7 @@ def verificar_alertas(db_path=None):
                 ORDER BY pr.precio_por_unidad ASC
                 LIMIT 1
             """, (alerta["producto_id"], ultima_fecha))
-            row = cursor.fetchone()
+            row = cursor_precios.fetchone()
             if row:
                 precio_actual = row["precio_por_unidad"] or row["precio"]
                 tienda = row["tienda"]
@@ -334,17 +367,15 @@ def verificar_alertas(db_path=None):
                 params.append(alerta["cantidad"])
 
             query += " ORDER BY COALESCE(pr.precio_por_unidad, pr.precio) ASC LIMIT 1"
-            cursor.execute(query, params)
-            row = cursor.fetchone()
+            cursor_precios.execute(query, params)
+            row = cursor_precios.fetchone()
 
             if row:
-                # Verificar talla si aplica (en Python, como hace el resto del sitio)
-                from app import detectar_talla
                 talla_producto = detectar_talla(row["nombre"])
                 if alerta["talla"] and talla_producto != alerta["talla"]:
                     # Buscar en todos los resultados del grupo
-                    cursor.execute(query.replace("LIMIT 1", ""), params)
-                    rows = cursor.fetchall()
+                    cursor_precios.execute(query.replace("LIMIT 1", ""), params)
+                    rows = cursor_precios.fetchall()
                     for r in rows:
                         if detectar_talla(r["nombre"]) == alerta["talla"]:
                             row = r
@@ -372,12 +403,13 @@ def verificar_alertas(db_path=None):
             )
 
             if enviado:
-                cursor.execute("""
+                cursor_alertas.execute("""
                     INSERT INTO alertas_enviadas (alerta_id, precio_encontrado, tienda, fecha_envio)
                     VALUES (?, ?, ?, ?)
                 """, (alerta["id"], precio_actual, tienda, ahora.isoformat()))
-                conn.commit()
+                conn_alertas.commit()
                 total_enviadas += 1
 
-    conn.close()
+    conn_precios.close()
+    conn_alertas.close()
     print(f"    [Alertas] {total_verificadas} alertas verificadas, {total_enviadas} emails enviados")

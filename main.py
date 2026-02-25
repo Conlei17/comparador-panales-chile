@@ -666,11 +666,6 @@ def main():
     guardar_en_db(conn, todos_los_productos, fecha_scraping)
     conn.close()
 
-    # --- PASO 3.5: Verificar alertas de precio ---
-    print("\n  Verificando alertas de precio...")
-    from alertas import verificar_alertas
-    verificar_alertas(ARCHIVO_DB)
-
     # --- PASO 4: Marcar precios mas bajos ---
     print("\n  Analizando precios mas bajos...")
     todos_los_productos = marcar_precios_mas_bajos(todos_los_productos)

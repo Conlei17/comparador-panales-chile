@@ -26,5 +26,8 @@ logs/
 .vscode/
 .idea/
 
+# Base de datos de alertas (vive solo en Render, no se commitea)
+data/alertas.db
+
 # Variables de entorno (pueden contener claves secretas)
 .env
