@@ -60,6 +60,124 @@ SLUG_KEYWORDS = [
     "emubaby", "goodnites",
 ]
 
+# URLs semilla de productos conocidos (el sitemap ya no lista productos individuales)
+URLS_SEMILLA = [
+    # --- Huggies ---
+    "https://salcobrand.cl/products/panales-huggies-natural-care-g-66-unidades",
+    "https://salcobrand.cl/products/panales-huggies-natural-care-xg-52-unidades",
+    "https://salcobrand.cl/products/panales-huggies-natural-care-xxg-52-unidades",
+    "https://salcobrand.cl/products/panales-huggies-natural-care-m-70-unidades",
+    "https://salcobrand.cl/products/panales-huggies-natural-care-m-72-unidades",
+    "https://salcobrand.cl/products/panal-recien-nacido-rn-x-34",
+    "https://salcobrand.cl/products/panal-recien-nacido-p-x-34",
+    "https://salcobrand.cl/products/panales-natural-care-quincenal-para-nino-talla-g-de-70-unidades",
+    "https://salcobrand.cl/products/panales-natural-care-quincenal-para-nino-talla-xxg-de-56-unidades",
+    "https://salcobrand.cl/products/panal-huggies-natural-care-g-148-unidades",
+    "https://salcobrand.cl/products/panal-infantil-natural-care-nino",
+    "https://salcobrand.cl/products/huggies-natural-care-talla-p-panales-desechables-34-unidades",
+    "https://salcobrand.cl/products/panales-huggies-natural-care-xg-48-unidades",
+    "https://salcobrand.cl/products/panales-huggies-active-sec-talla-m-36-unidades",
+    "https://salcobrand.cl/products/panales-active-sec-diseno-toy-story",
+    "https://salcobrand.cl/products/panales-active-sec-diseno-toy-story-g-68-unidades",
+    "https://salcobrand.cl/products/panales-huggies-dermacare-etapa-0-rn-con-corte-umbilical-78-unidades",
+    "https://salcobrand.cl/products/panales-huggies-dermacare-etapa-3-g-cuidado-mas-avanzado-para-la-piel-48-unidades",
+    "https://salcobrand.cl/products/panales-huggies-little-swimmers-g-xg-10-unidades",
+    "https://salcobrand.cl/products/panales-huggies-prematuro-30-unidades",
+    "https://salcobrand.cl/products/toallitas-humedas-huggies-triple-proteccion-48-unidades",
+    "https://salcobrand.cl/products/panales-good-nites",
+    # --- Pampers ---
+    "https://salcobrand.cl/products/panales-desechables-pampers-premium-care-recien-nacido-talla-p-36-unidades",
+    "https://salcobrand.cl/products/panales-desechables-premium-care-recien-nacido-rn-36-unidades",
+    "https://salcobrand.cl/products/panales-pampers-premium-care-hipoalergenico-talla-m-86-unidades",
+    "https://salcobrand.cl/products/panales-desechables-pampers-premium-care-g-54-unidades",
+    "https://salcobrand.cl/products/panales-desechables-pampers-premium-care-hipoalergenico-talla-g-216-unidades",
+    "https://salcobrand.cl/products/panales-premium-care-xg-x128",
+    "https://salcobrand.cl/products/panales-desechables-pampers-premium-care-talla-xxg-128-unidades",
+    "https://salcobrand.cl/products/panales-desechables-pampers-confort-sec-xg-46-unidades",
+    "https://salcobrand.cl/products/panales-pampers-confort-sec-xxg-112-unidades",
+    "https://salcobrand.cl/products/panales-desechables-pampers-pants-talla-g-128-unidades",
+    "https://salcobrand.cl/products/panales-para-el-agua-splashers-talla-m-g-11-unidades",
+    # --- Babysec ---
+    "https://salcobrand.cl/products/panales-babysec-super-premium-talla-m-70-unidades",
+    "https://salcobrand.cl/products/panales-babysec-recien-nacido-34-unidades",
+    "https://salcobrand.cl/products/panales-babysec-premium-talla-g-68-unidades",
+    "https://salcobrand.cl/products/panales-super-premium-cuidado-total-talla-m-70-unidades",
+    "https://salcobrand.cl/products/babysec-premium-g-x68",
+    "https://salcobrand.cl/products/panales-super-premium",
+    "https://salcobrand.cl/products/panales-babysec-super-premium-talla-xg-54-unidades",
+    "https://salcobrand.cl/products/panales-babysec-super-premium-talla-g-34-unidades",
+    "https://salcobrand.cl/products/panales-de-bebe-babysec-super-premium-112-unidades-xg",
+    "https://salcobrand.cl/products/toallitas-humedas-babysec-premium-70un",
+    "https://salcobrand.cl/products/panales-de-bebe-recien-nacido",
+    # --- Emubaby ---
+    "https://salcobrand.cl/products/emubaby-super-premium-xxg-60-unidades",
+    "https://salcobrand.cl/products/panal-desechable-emubaby-super-premium-talla-xxg-34-unidades",
+    # --- Nenitos ---
+    "https://salcobrand.cl/products/panales-desechables-nenitos-talla-xxg-32-unidades",
+    "https://salcobrand.cl/products/panales-desechables-nenitos-talla-xg-32-unidades",
+    "https://salcobrand.cl/products/nenitos-pack-toallitas-humedas-160-unidades",
+    # --- Terra ---
+    "https://salcobrand.cl/products/panales-bio-talla-g-terra-18-unidades",
+    "https://salcobrand.cl/products/panales-bio-xxg-terra-14-unidades",
+    # --- Toallitas ---
+    "https://salcobrand.cl/products/waterwipes-toallitas-humedas-180-unidades",
+    "https://salcobrand.cl/products/toallitas-humedas-box-value-pack-720-und",
+    "https://salcobrand.cl/products/waterwipes-toallitas-humedas-60-unidades",
+    "https://salcobrand.cl/products/waterwipes-toallitas-humedas-28-unidades",
+    "https://salcobrand.cl/products/toallitas-humedas-para-bebes",
+    "https://salcobrand.cl/products/toallas-humedas-para-bebe-160-unidades",
+    "https://salcobrand.cl/products/toallas-humedas-para-bebe-120-unidades",
+    "https://salcobrand.cl/products/toallitas-humedas-bebe-60-unidades",
+    "https://salcobrand.cl/products/toallitas-humedas-para-bebes-6a67556f-a7a8-4f37-a7cc-5bbcd8c27614",
+    "https://salcobrand.cl/products/toallitas-humedas-aqua-baby-60-unidades",
+    "https://salcobrand.cl/products/caja-toallitas-humedas-aqua-baby-720-unidades",
+    "https://salcobrand.cl/products/aqua-baby-toallitas-humedas-30-unidades",
+    "https://salcobrand.cl/products/toalla-humeda-huggies-one-done-x-80",
+    "https://salcobrand.cl/products/toallitas-humedas-one-done",
+    "https://salcobrand.cl/products/toallitas-humedas-huggies-limpieza-efectiva-48-unidades",
+    "https://salcobrand.cl/products/toallitas-humedas-pampers-limpieza-delicada-48-unidades",
+    "https://salcobrand.cl/products/neniwipes-toallitas-humedas-bebe-60-unidades",
+    "https://salcobrand.cl/products/nenitos-pack-toallitas-humedas-99-9-agua-2x80-unidades",
+    # --- Formulas NAN ---
+    "https://salcobrand.cl/products/formula-infantil-nan-1-optipro-800g",
+    "https://salcobrand.cl/products/formula-infantil-nan-2-optipro-800g",
+    "https://salcobrand.cl/products/formula-infantil-nan-3-supremepro-800g",
+    "https://salcobrand.cl/products/formula-infantil-nan-1-supremepro-800g",
+    "https://salcobrand.cl/products/formula-infantil-nan-2-supremepro-800g",
+    "https://salcobrand.cl/products/formula-infantil-nan-3-supreme-optipro-800g",
+    "https://salcobrand.cl/products/formula-infantil-nan-prematuros-400g",
+    "https://salcobrand.cl/products/formula-infantil-nan-sin-lactosa-400g",
+    "https://salcobrand.cl/products/formula-infantil-nan-ae-800g",
+    "https://salcobrand.cl/products/formula-infantil-nan-expertpro-comfort-etapas-1-y-2-800g",
+    "https://salcobrand.cl/products/formula-infantil-nan-expertpro-comfort-etapas-1-y-2-400g",
+    "https://salcobrand.cl/products/formula-infantil-nan-expertpro-comfort-etapa-3-800g",
+    "https://salcobrand.cl/products/formula-infantil-nan-expertpro-comfort-etapas-1-y-2-1400g",
+    # --- Formulas Nidal/Nido ---
+    "https://salcobrand.cl/products/formula-lactea-nidal-inicio-800g",
+    "https://salcobrand.cl/products/formula-lactea-nido-etapa-1-1350g",
+    "https://salcobrand.cl/products/formula-lactea-nido-etapa-1-700g",
+    # --- Formulas Similac ---
+    "https://salcobrand.cl/products/similac-total-comfort-1-2-360g",
+    "https://salcobrand.cl/products/formula-de-inicio-para-lactantes-nacidos-de-termino-hasta-los-6-meses",
+    "https://salcobrand.cl/products/total-comfort-1-2",
+    "https://salcobrand.cl/products/similac-total-comfort-1-2-820g",
+    "https://salcobrand.cl/products/similac-total-comfort-1-2-bib-1400g",
+    "https://salcobrand.cl/products/similac-sensitive-s-lactosa-375g",
+    "https://salcobrand.cl/products/formula-para-lactantes-de-0-a-12-meses-sin-lactosa",
+    "https://salcobrand.cl/products/formula-infantil-similac-2-5hmo-1-4-kg",
+    "https://salcobrand.cl/products/formula-infantil-similac-1-5hmo-1-4kg",
+    "https://salcobrand.cl/products/similac-total-comfort-3-820g",
+    "https://salcobrand.cl/products/pack-de-formula-para-lactantes-de-continuacion",
+    # --- Formulas S-26/Alula ---
+    "https://salcobrand.cl/products/s-26-formula-en-polvo-sin-lactosa-con-hierro-de-0-a-12-meses",
+    "https://salcobrand.cl/products/formula-comfort-en-polvo-con-hierro-y-proteina-parcialmente-hidrolizada-para-lactantes-de-0-a-12-meses",
+    "https://salcobrand.cl/products/alula-gold-1-400g-0-a-6-meses",
+    "https://salcobrand.cl/products/formula-lactea-en-polvo-con-hierro-para-lactantes-de-0-a-6-meses",
+    "https://salcobrand.cl/products/formula-lactea-en-polvo-con-hierro-para-lactantes-de-6-a-12-meses",
+    # --- Formulas Althera ---
+    "https://salcobrand.cl/products/formula-infantil-manejo-de-alergias-a-proteina-de-la-leche-400-gr",
+]
+
 # Palabras clave para excluir productos no relevantes
 EXCLUIR_NOMBRE = [
     # Adulto
@@ -361,11 +479,35 @@ def guardar_csv(productos, ruta_archivo):
     print(f"Total de productos guardados: {len(productos)}")
 
 
+def obtener_urls_combinadas():
+    """
+    Combina URLs de la lista semilla con las del sitemap.
+    Retorna lista de URLs unicas.
+    """
+    urls = set(URLS_SEMILLA)
+    print(f"  URLs semilla: {len(urls)}")
+
+    # Intentar complementar con sitemap
+    try:
+        sitemap_urls = obtener_sitemaps()
+        if sitemap_urls:
+            urls_sitemap = obtener_urls_productos(sitemap_urls)
+            nuevas = set(urls_sitemap) - urls
+            if nuevas:
+                print(f"  URLs nuevas del sitemap: {len(nuevas)}")
+                urls.update(nuevas)
+    except Exception as e:
+        print(f"  AVISO: Error leyendo sitemaps (usando solo semillas): {e}")
+
+    print(f"  Total URLs a scrapear: {len(urls)}")
+    return list(urls)
+
+
 def main():
     """
     Funcion principal que ejecuta el scraping de Salcobrand.
 
-    1. Obtiene URLs de productos desde los sitemaps
+    1. Obtiene URLs de productos (semilla + sitemap)
     2. Visita cada pagina y extrae product_traker_data
     3. Procesa y deduplica productos
     4. Guarda en CSV
@@ -376,16 +518,11 @@ def main():
     print(f"Inicio: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print()
 
-    # Paso 1: Obtener URLs de productos desde sitemaps
-    print("[Paso 1] Obteniendo URLs desde sitemaps...")
-    sitemap_urls = obtener_sitemaps()
-    if not sitemap_urls:
-        print("No se encontraron sub-sitemaps. Abortando.")
-        return
-
-    urls_productos = obtener_urls_productos(sitemap_urls)
+    # Paso 1: Obtener URLs de productos
+    print("[Paso 1] Obteniendo URLs de productos...")
+    urls_productos = obtener_urls_combinadas()
     if not urls_productos:
-        print("No se encontraron URLs de productos relevantes. Abortando.")
+        print("No se encontraron URLs de productos. Abortando.")
         return
 
     # Paso 2: Visitar cada pagina de producto
