@@ -378,9 +378,12 @@ def extraer_cantidad(nombre):
     Intenta extraer la cantidad de unidades del nombre del producto.
     Para fórmulas infantiles, extrae el peso en gramos.
     """
-    # Para fórmulas: extraer peso en gramos
+    # Para fórmulas: extraer peso en gramos o kilogramos
     if es_formula(nombre):
-        match_gramos = re.search(r"(\d+)\s*(?:g|gr|gramos)\b", nombre, re.IGNORECASE)
+        match_kg = re.search(r"(\d+(?:[.,]\d+)?)\s*kg\b", nombre, re.IGNORECASE)
+        if match_kg:
+            return int(float(match_kg.group(1).replace(",", ".")) * 1000)
+        match_gramos = re.search(r"(\d+)\s*(?:g|grs|gr|gramos)\b", nombre, re.IGNORECASE)
         if match_gramos:
             return int(match_gramos.group(1))
 
