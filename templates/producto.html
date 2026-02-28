@@ -128,12 +128,12 @@
           {% endif %}
           {% if grupo.cantidad %}
             <span class="producto-hero-sep">&middot;</span>
-            <span>{{ grupo.cantidad }} unidades</span>
+            <span>{{ grupo.cantidad }} {{ "g" if es_formula_cat else "unidades" }}</span>
           {% endif %}
         </div>
         {% if mejor_ppu %}
-        <div class="precio-grande">{{ mejor_ppu|precio }}/unidad</div>
-        <div class="ppu-grande-label">Mejor precio por unidad</div>
+        <div class="precio-grande">{{ mejor_ppu|precio }}{{ "/kg" if es_formula_cat else "/unidad" }}</div>
+        <div class="ppu-grande-label">{{ "Mejor precio por kilo" if es_formula_cat else "Mejor precio por unidad" }}</div>
         {% elif mejor_precio %}
         <div class="precio-grande">{{ mejor_precio|precio }}</div>
         <div class="ppu-grande-label">Mejor precio</div>
@@ -154,7 +154,7 @@
           <input type="email" id="alerta-email" placeholder="tu@email.com" class="alerta-input" required>
         </div>
         <div class="filtro-grupo">
-          <label for="alerta-precio">Precio objetivo ($/unidad)</label>
+          <label for="alerta-precio">Precio objetivo ({{ "$/kg" if es_formula_cat else "$/unidad" }})</label>
           <input type="number" id="alerta-precio" value="{{ (mejor_ppu or mejor_precio or 0) + 1 }}" min="1" class="alerta-input" required>
         </div>
       </div>
@@ -179,7 +179,7 @@
             <th>Tienda</th>
             <th>Nombre</th>
             <th>Precio</th>
-            <th>Precio/Unidad</th>
+            <th>{{ "Precio/Kg" if es_formula_cat else "Precio/Unidad" }}</th>
             <th>Ver</th>
           </tr>
         </thead>
@@ -234,7 +234,7 @@
         </div>
         <div class="card-body">
           <div>
-            <div class="card-label">Precio/Unidad</div>
+            <div class="card-label">{{ "Precio/Kg" if es_formula_cat else "Precio/Unidad" }}</div>
             <div class="card-ppu">{{ o.precio_por_unidad|precio }}</div>
           </div>
           <div>
@@ -251,7 +251,7 @@
           </div>
           <div>
             <div class="card-label">Cantidad</div>
-            <div class="card-value">{{ o.tamano_unidades or '-' }} unidades</div>
+            <div class="card-value">{{ o.tamano_unidades or '-' }} {{ "g" if es_formula_cat else "unidades" }}</div>
           </div>
         </div>
         <div class="card-footer">
@@ -283,7 +283,7 @@
             <tr>
               <th>Cantidad</th>
               <th>Mejor precio</th>
-              <th>Precio/Unidad</th>
+              <th>{{ "Precio/Kg" if es_formula_cat else "Precio/Unidad" }}</th>
               <th>Tiendas</th>
               <th>Ver</th>
             </tr>
@@ -291,7 +291,7 @@
           <tbody>
             {% for p in otras_presentaciones %}
             <tr>
-              <td><strong>{{ p.cantidad }} unidades</strong></td>
+              <td><strong>{{ p.cantidad }} {{ "g" if es_formula_cat else "unidades" }}</strong></td>
               <td>{{ p.mejor_precio|precio }}</td>
               <td class="col-ppu">{{ p.mejor_ppu|precio }}</td>
               <td>{{ p.num_tiendas }} tienda{{ 's' if p.num_tiendas != 1 else '' }}</td>
@@ -308,7 +308,7 @@
           <div class="card-body" style="grid-template-columns: 1fr 1fr 1fr;">
             <div>
               <div class="card-label">Cantidad</div>
-              <div class="card-value"><strong>{{ p.cantidad }}u</strong></div>
+              <div class="card-value"><strong>{{ p.cantidad }}{{ "g" if es_formula_cat else "u" }}</strong></div>
             </div>
             <div>
               <div class="card-label">Mejor PPU</div>

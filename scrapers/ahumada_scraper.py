@@ -164,10 +164,30 @@ def extraer_marca(nombre_producto):
     return primera_palabra
 
 
+FORMULAS_KEYWORDS = [
+    "fórmula", "formula", "leche infantil", "leche en polvo",
+    "nan ", "nido", "similac", "enfamil", "s-26", "s26",
+    "alula", "nidal", "nutrilon", "blemil",
+]
+
+
+def es_formula(nombre):
+    """Detecta si el producto es una fórmula infantil."""
+    nombre_lower = nombre.lower()
+    return any(kw in nombre_lower for kw in FORMULAS_KEYWORDS)
+
+
 def extraer_cantidad(nombre_producto):
     """
     Intenta extraer la cantidad de unidades del nombre del producto.
+    Para fórmulas infantiles, extrae el peso en gramos.
     """
+    # Para fórmulas: extraer peso en gramos
+    if es_formula(nombre_producto):
+        match_gramos = re.search(r"(\d+)\s*(?:g|gr|gramos)\b", nombre_producto, re.IGNORECASE)
+        if match_gramos:
+            return int(match_gramos.group(1))
+
     patrones = [
         r"(\d+)\s*(?:pa[ñn]ales)\b",
         r"(\d+)\s*(?:unidades|unid|und)\b",
@@ -298,17 +318,22 @@ def extraer_productos(soup):
             # --- PRECIO POR UNIDAD ---
             precio_por_unidad = None
 
-            # Intentar extraer del texto de precio fraccionado
-            ppu_elem = contenedor.select_one(
-                ".preccio-fracionado, .precio-fraccionado, "
-                "[class*='fracionado'], [class*='fraccionado']"
-            )
-            if ppu_elem:
-                precio_por_unidad = extraer_precio_por_unidad_texto(ppu_elem.get_text())
+            if es_formula(nombre):
+                # Para fórmulas: calcular precio por kilo
+                if precio and cantidad and cantidad > 0:
+                    precio_por_unidad = round(precio / cantidad * 1000)
+            else:
+                # Intentar extraer del texto de precio fraccionado
+                ppu_elem = contenedor.select_one(
+                    ".preccio-fracionado, .precio-fraccionado, "
+                    "[class*='fracionado'], [class*='fraccionado']"
+                )
+                if ppu_elem:
+                    precio_por_unidad = extraer_precio_por_unidad_texto(ppu_elem.get_text())
 
-            # Si no se encontro el precio por unidad, calcularlo
-            if not precio_por_unidad and precio and cantidad and cantidad > 0:
-                precio_por_unidad = round(precio / cantidad)
+                # Si no se encontro el precio por unidad, calcularlo
+                if not precio_por_unidad and precio and cantidad and cantidad > 0:
+                    precio_por_unidad = round(precio / cantidad)
 
             # --- IMAGEN ---
             img_elem = contenedor.select_one("img")

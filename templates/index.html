@@ -265,14 +265,14 @@
         <div class="ahorro-comparacion">
           <div class="ahorro-item ahorro-mejor">
             <span class="ahorro-etiqueta">Mejor precio</span>
-            <span class="ahorro-precio">{{ ahorro.mejor.precio_por_unidad|precio }}/u</span>
+            <span class="ahorro-precio">{{ ahorro.mejor.precio_por_unidad|precio }}{{ "/kg" if es_formula_cat else "/u" }}</span>
             <span class="ahorro-nombre">{{ ahorro.mejor.nombre }}</span>
             <span class="ahorro-tienda">{{ ahorro.mejor.tienda }}</span>
           </div>
           <div class="ahorro-vs">vs</div>
           <div class="ahorro-item ahorro-peor">
             <span class="ahorro-etiqueta">Mas caro</span>
-            <span class="ahorro-precio">{{ ahorro.peor.precio_por_unidad|precio }}/u</span>
+            <span class="ahorro-precio">{{ ahorro.peor.precio_por_unidad|precio }}{{ "/kg" if es_formula_cat else "/u" }}</span>
             <span class="ahorro-nombre">{{ ahorro.peor.nombre }}</span>
             <span class="ahorro-tienda">{{ ahorro.peor.tienda }}</span>
           </div>
@@ -280,9 +280,10 @@
         <div class="ahorro-resumen">
           <p>
             Comprando el mas barato ahorras
-            <strong>{{ ahorro.diferencia_por_unidad|precio }}</strong> por panal
+            <strong>{{ ahorro.diferencia_por_unidad|precio }}</strong> {{ "por kilo" if es_formula_cat else "por panal" }}
             (<strong>{{ "%.0f"|format(ahorro.porcentaje) }}%</strong> menos).
           </p>
+          {% if not es_formula_cat %}
           <div class="ahorro-desglose">
             <div class="ahorro-stat">
               <span class="ahorro-stat-valor">{{ ahorro.ahorro_mensual|precio }}</span>
@@ -295,6 +296,7 @@
               <span class="ahorro-stat-nota">12 meses</span>
             </div>
           </div>
+          {% endif %}
         </div>
       </div>
     </div>
@@ -339,7 +341,7 @@
               <th>Cantidad</th>
               <th>
                 <a href="{{ sort_urls.precio_por_unidad }}" class="sort-header {{ 'sort-active' if orden_actual == 'precio_por_unidad' else '' }}">
-                  Precio/Unidad <span class="sort-arrow">&#9660;</span>
+                  {{ "Precio/Kg" if es_formula_cat else "Precio/Unidad" }} <span class="sort-arrow">&#9660;</span>
                 </a>
               </th>
               <th>Ver</th>
@@ -384,7 +386,7 @@
                   <span class="badge-descuento">-{{ p.descuento_pct }}%</span>
                 {% endif %}
               </td>
-              <td>{{ p.tamano_unidades or '-' }} un.</td>
+              <td>{{ p.tamano_unidades or '-' }} {{ "g" if es_formula_cat else "un." }}</td>
               <td class="col-ppu">{{ p.precio_por_unidad|precio }}</td>
               <td>
                 {% if p.url %}
@@ -429,7 +431,7 @@
           </div>
           <div class="card-body">
             <div>
-              <div class="card-label">Precio/Unidad</div>
+              <div class="card-label">{{ "Precio/Kg" if es_formula_cat else "Precio/Unidad" }}</div>
               <div class="card-ppu">{{ p.precio_por_unidad|precio }}</div>
             </div>
             <div>
@@ -446,7 +448,7 @@
             </div>
             <div>
               <div class="card-label">Cantidad</div>
-              <div class="card-value">{{ p.tamano_unidades or '-' }} unidades</div>
+              <div class="card-value">{{ p.tamano_unidades or '-' }} {{ "g" if es_formula_cat else "unidades" }}</div>
             </div>
             <div>
               <div class="card-label">Marca</div>
@@ -721,11 +723,14 @@
 
         // Cantidad
         html += '<tr><td>Cantidad</td>';
-        seleccionados.forEach(function(p) { html += '<td>' + (p.cantidad || '-') + ' un.</td>'; });
+        var esFormula = {{ 'true' if es_formula_cat else 'false' }};
+        var sufUnidad = esFormula ? 'g' : 'un.';
+        var labelPPU = esFormula ? 'Precio/Kg' : 'Precio/Unidad';
+        seleccionados.forEach(function(p) { html += '<td>' + (p.cantidad || '-') + ' ' + sufUnidad + '</td>'; });
         html += '</tr>';
 
         // PPU
-        html += '<tr><td>Precio/Unidad</td>';
+        html += '<tr><td>' + labelPPU + '</td>';
         seleccionados.forEach(function(p) {
           var esMejor = p.ppu && p.ppu === minPPU;
           html += '<td class="' + (esMejor ? 'comparar-mejor' : '') + '">' + formatPrecio(p.ppu) + '</td>';
@@ -739,7 +744,7 @@
             html += '<td class="comparar-mejor">Mejor precio</td>';
           } else if (p.ppu) {
             var diff = p.ppu - minPPU;
-            html += '<td>+' + formatPrecio(diff) + '/u</td>';
+            html += '<td>+' + formatPrecio(diff) + (esFormula ? '/kg' : '/u') + '</td>';
           } else {
             html += '<td>-</td>';
           }
@@ -757,12 +762,12 @@
           html += '<div class="comparar-card-nombre">' + p.nombre + '</div>';
           html += '<div class="comparar-card-detalle"><span>Tienda:</span> ' + p.tienda + '</div>';
           html += '<div class="comparar-card-detalle"><span>Precio:</span> ' + formatPrecio(p.precio) + '</div>';
-          html += '<div class="comparar-card-detalle"><span>Cantidad:</span> ' + (p.cantidad || '-') + ' un.</div>';
-          html += '<div class="comparar-card-detalle comparar-card-ppu' + (esMejor ? ' comparar-mejor' : '') + '"><span>Precio/Unidad:</span> ' + formatPrecio(p.ppu) + '</div>';
+          html += '<div class="comparar-card-detalle"><span>Cantidad:</span> ' + (p.cantidad || '-') + ' ' + sufUnidad + '</div>';
+          html += '<div class="comparar-card-detalle comparar-card-ppu' + (esMejor ? ' comparar-mejor' : '') + '"><span>' + labelPPU + ':</span> ' + formatPrecio(p.ppu) + '</div>';
           if (esMejor) {
             html += '<div class="comparar-mejor-badge">Mejor precio</div>';
           } else if (p.ppu) {
-            html += '<div class="comparar-card-detalle"><span>Diferencia:</span> +' + formatPrecio(p.ppu - minPPU) + '/u</div>';
+            html += '<div class="comparar-card-detalle"><span>Diferencia:</span> +' + formatPrecio(p.ppu - minPPU) + (esFormula ? '/kg' : '/u') + '</div>';
           }
           html += '</div>';
         });

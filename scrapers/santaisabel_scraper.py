@@ -220,10 +220,30 @@ def extraer_marca(nombre_producto):
     return primera_palabra
 
 
+FORMULAS_KEYWORDS = [
+    "fórmula", "formula", "leche infantil", "leche en polvo",
+    "nan ", "nido", "similac", "enfamil", "s-26", "s26",
+    "alula", "nidal", "nutrilon", "blemil",
+]
+
+
+def es_formula(nombre):
+    """Detecta si el producto es una fórmula infantil."""
+    nombre_lower = nombre.lower()
+    return any(kw in nombre_lower for kw in FORMULAS_KEYWORDS)
+
+
 def extraer_cantidad(nombre_producto):
     """
     Intenta extraer la cantidad de unidades del nombre del producto.
+    Para fórmulas infantiles, extrae el peso en gramos.
     """
+    # Para fórmulas: extraer peso en gramos
+    if es_formula(nombre_producto):
+        match_gramos = re.search(r"(\d+)\s*(?:g|gr|gramos)\b", nombre_producto, re.IGNORECASE)
+        if match_gramos:
+            return int(match_gramos.group(1))
+
     patrones = [
         r"(\d+)\s*(?:pa[ñn]ales)\b",
         r"(\d+)\s*(?:unidades|unid|und)\b",
@@ -302,7 +322,10 @@ def extraer_productos_de_json(data):
 
         precio_por_unidad = None
         if precio and cantidad and cantidad > 0:
-            precio_por_unidad = round(precio / cantidad)
+            if es_formula(nombre):
+                precio_por_unidad = round(precio / cantidad * 1000)
+            else:
+                precio_por_unidad = round(precio / cantidad)
 
         # Imagen del producto
         imagen = ""
@@ -408,7 +431,10 @@ def extraer_productos_de_html(soup):
 
             precio_por_unidad = None
             if precio and cantidad and cantidad > 0:
-                precio_por_unidad = round(precio / cantidad)
+                if es_formula(nombre):
+                    precio_por_unidad = round(precio / cantidad * 1000)
+                else:
+                    precio_por_unidad = round(precio / cantidad)
 
             # Imagen
             imagen = ""

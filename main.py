@@ -19,6 +19,20 @@ import csv
 import sqlite3
 from datetime import datetime
 
+# Palabras clave para detectar fórmulas infantiles
+FORMULAS_KEYWORDS = [
+    "fórmula", "formula", "leche infantil", "leche en polvo",
+    "nan ", "nido", "similac", "enfamil", "s-26", "s26",
+    "alula", "nidal", "nutrilon", "blemil",
+]
+
+
+def es_formula(nombre):
+    """Detecta si el producto es una fórmula infantil."""
+    nombre_lower = nombre.lower()
+    return any(kw in nombre_lower for kw in FORMULAS_KEYWORDS)
+
+
 # --- CONFIGURACION ---
 
 # Carpeta base del proyecto (donde esta este archivo)
@@ -223,11 +237,15 @@ def guardar_en_db(conn, productos, fecha_scraping):
             imagen_url=p.get("imagen", ""),
         )
 
-        # Calculamos precio_por_unidad: precio / cantidad de panales
+        # Calculamos precio_por_unidad: precio/kg para fórmulas, precio/unidad para el resto
         precio = p.get("precio")
         cantidad = p.get("cantidad_unidades")
+        nombre = p.get("nombre", "")
         if precio and cantidad and cantidad > 0:
-            precio_por_unidad = round(precio / cantidad)
+            if es_formula(nombre):
+                precio_por_unidad = round(precio / cantidad * 1000)
+            else:
+                precio_por_unidad = round(precio / cantidad)
         else:
             precio_por_unidad = p.get("precio_por_unidad")
 

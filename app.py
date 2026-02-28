@@ -928,7 +928,8 @@ def _render_index(categoria_path="", marca_path="", talla_path=""):
             partes_desc.append(f"Talla {talla_sel}")
         nombre_filtro = " ".join(partes_desc) if partes_desc else "Panales"
         ppu = formatear_precio(mejor.get("precio_por_unidad"))
-        meta_descripcion = f"{nombre_filtro} desde {ppu}/unidad. Compara precios en 9 tiendas chilenas."
+        sufijo_ppu = "/kg" if categoria_sel == "Fórmulas Infantiles" else "/unidad"
+        meta_descripcion = f"{nombre_filtro} desde {ppu}{sufijo_ppu}. Compara precios en 9 tiendas chilenas."
     elif hay_filtro:
         meta_descripcion = "Compara precios de panales, toallitas y formulas infantiles en 9 tiendas de Chile."
     else:
@@ -964,12 +965,15 @@ def _render_index(categoria_path="", marca_path="", talla_path=""):
         og_partes.append(f"Talla {talla_sel}")
     if hay_filtro and productos:
         mejor = productos[0]
+        sufijo_ppu = "/kg" if categoria_sel == "Fórmulas Infantiles" else "/unidad"
         og_partes.append(
-            f"Desde {formatear_precio(mejor['precio_por_unidad'])}/unidad"
+            f"Desde {formatear_precio(mejor['precio_por_unidad'])}{sufijo_ppu}"
         )
     og_descripcion = " - ".join(og_partes) if og_partes else (
         "Compara precios de panales entre tiendas chilenas y encuentra el mas barato."
     )
+
+    es_formula_cat = categoria_sel == "Fórmulas Infantiles"
 
     return render_template(
         "index.html",
@@ -999,6 +1003,7 @@ def _render_index(categoria_path="", marca_path="", talla_path=""):
         canonical_url=canonical_url,
         construir_url_amigable=construir_url_amigable,
         slugify=slugify,
+        es_formula_cat=es_formula_cat,
     )
 
 
@@ -1195,9 +1200,11 @@ def producto_detalle(cat_slug, marca_slug, producto_slug):
     cantidad_str = f" {grupo['cantidad']} Unidades" if grupo["cantidad"] else ""
 
     titulo_pagina = f"{nombre} - Compara precios | BabyAhorro"
+    es_formula_cat = categoria == "Fórmulas Infantiles"
+    sufijo_ppu = "/kg" if es_formula_cat else "/unidad"
     if mejor_ppu:
         meta_descripcion = (f"{nombre}{talla_str}{cantidad_str}. "
-                            f"Desde {formatear_precio(mejor_ppu)}/unidad. "
+                            f"Desde {formatear_precio(mejor_ppu)}{sufijo_ppu}. "
                             f"Compara precios en {len(ofertas)} tienda{'s' if len(ofertas) != 1 else ''}.")
     else:
         meta_descripcion = (f"{nombre}{talla_str}{cantidad_str}. "
@@ -1222,6 +1229,7 @@ def producto_detalle(cat_slug, marca_slug, producto_slug):
         marca=marca,
         logos_tiendas=LOGOS_TIENDAS,
         otras_presentaciones=otras_presentaciones,
+        es_formula_cat=es_formula_cat,
     )
 
 

@@ -360,10 +360,30 @@ def extraer_marca(nombre, vendor=None):
     return "Desconocida"
 
 
+FORMULAS_KEYWORDS = [
+    "fórmula", "formula", "leche infantil", "leche en polvo",
+    "nan ", "nido", "similac", "enfamil", "s-26", "s26",
+    "alula", "nidal", "nutrilon", "blemil",
+]
+
+
+def es_formula(nombre):
+    """Detecta si el producto es una fórmula infantil."""
+    nombre_lower = nombre.lower()
+    return any(kw in nombre_lower for kw in FORMULAS_KEYWORDS)
+
+
 def extraer_cantidad(nombre):
     """
     Intenta extraer la cantidad de unidades del nombre del producto.
+    Para fórmulas infantiles, extrae el peso en gramos.
     """
+    # Para fórmulas: extraer peso en gramos
+    if es_formula(nombre):
+        match_gramos = re.search(r"(\d+)\s*(?:g|gr|gramos)\b", nombre, re.IGNORECASE)
+        if match_gramos:
+            return int(match_gramos.group(1))
+
     patrones = [
         r"(\d+)\s*(?:pa[ñn]ales)\b",
         r"(\d+)\s*(?:toallitas|toallas)\b",
@@ -424,10 +444,13 @@ def procesar_producto(url, data):
         # Cantidad
         cantidad = extraer_cantidad(nombre)
 
-        # Precio por unidad
+        # Precio por unidad (precio/kg para fórmulas, precio/unidad para el resto)
         precio_por_unidad = None
         if precio and cantidad and cantidad > 0:
-            precio_por_unidad = round(precio / cantidad)
+            if es_formula(nombre):
+                precio_por_unidad = round(precio / cantidad * 1000)
+            else:
+                precio_por_unidad = round(precio / cantidad)
 
         return {
             "nombre": nombre,
