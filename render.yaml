@@ -9,5 +9,7 @@ services:
         value: "3.12"
       - key: RESEND_API_KEY
         sync: false
+      - key: GITHUB_TOKEN
+        sync: false
       - key: BASE_URL
         value: "https://babyahorro.cl"

@@ -27,45 +27,43 @@ jobs:
       - name: Instalar dependencias
         run: pip install requests beautifulsoup4 lxml
 
-      - name: Descargar precios.db existente desde rama data
+      - name: Descargar DBs existentes desde rama data
         run: |
           mkdir -p data
           if git ls-remote --exit-code --heads origin data > /dev/null 2>&1; then
-            echo "Descargando precios.db existente..."
             git fetch origin data
-            git show origin/data:data/precios.db > data/precios.db 2>/dev/null || echo "No existe precios.db en rama data, se creara una nueva"
+            git show origin/data:data/precios.db > data/precios.db 2>/dev/null || echo "No existe precios.db"
+            git show origin/data:data/alertas.db > data/alertas.db 2>/dev/null || echo "No existe alertas.db"
           else
-            echo "Rama data no existe aun, se creara una nueva DB"
+            echo "Rama data no existe aun"
           fi
 
       - name: Ejecutar scrapers
         run: python main.py
 
-      - name: Push precios.db a rama data
+      - name: Push DBs a rama data
         run: |
-          # Guardar precios.db fuera del workspace antes de cambiar de rama
           cp data/precios.db /tmp/precios.db
+          cp data/alertas.db /tmp/alertas.db 2>/dev/null || true
 
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          # Verificar si la rama data existe en el remote
           if git ls-remote --exit-code --heads origin data > /dev/null 2>&1; then
             git fetch origin data
             git checkout -f -b data origin/data
           else
-            # Crear rama orphan (sin historial de main)
             git checkout --orphan data
             git rm -rf .
           fi
 
-          # Restaurar precios.db
           mkdir -p data
           cp /tmp/precios.db data/precios.db
+          cp /tmp/alertas.db data/alertas.db 2>/dev/null || true
 
           git add data/precios.db
-          # Solo commitear si hay cambios
-          git diff --staged --quiet || git commit -m "Actualizar precios $(date -u +%Y-%m-%d)"
+          git add data/alertas.db 2>/dev/null || true
+          git diff --staged --quiet || git commit -m "Actualizar datos $(date -u +%Y-%m-%d)"
           git push origin data
 
       - name: Reiniciar app en Render

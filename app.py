@@ -31,7 +31,12 @@ DIR_PROYECTO = os.path.dirname(os.path.abspath(__file__))
 ARCHIVO_DB = os.path.join(DIR_PROYECTO, "data", "precios.db")
 
 PRECIOS_DB_URL = "https://raw.githubusercontent.com/Conlei17/comparador-panales-chile/data/data/precios.db"
+ALERTAS_DB_URL = "https://raw.githubusercontent.com/Conlei17/comparador-panales-chile/data/data/alertas.db"
 REFRESH_INTERVAL = 4 * 3600  # 4 horas
+
+GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
+GITHUB_REPO = "Conlei17/comparador-panales-chile"
+GITHUB_ALERTAS_PATH = "data/alertas.db"
 
 
 def descargar_precios_db():
@@ -53,6 +58,58 @@ def descargar_precios_db():
         return False
 
 
+def descargar_alertas_db():
+    """Descarga alertas.db desde la rama data de GitHub si existe."""
+    import requests
+    try:
+        resp = requests.get(ALERTAS_DB_URL, timeout=30)
+        if resp.status_code == 200:
+            os.makedirs(os.path.dirname(ARCHIVO_ALERTAS_DB), exist_ok=True)
+            with open(ARCHIVO_ALERTAS_DB, "wb") as f:
+                f.write(resp.content)
+            print(f"[Startup] alertas.db descargada ({len(resp.content)} bytes)")
+        else:
+            print("[Startup] alertas.db no existe en GitHub, se creara una nueva")
+    except Exception as e:
+        print(f"[Startup] Error descargando alertas.db: {e}")
+
+
+def subir_alertas_db():
+    """Sube alertas.db a la rama data de GitHub via API."""
+    if not GITHUB_TOKEN:
+        print("[Alertas] No se puede subir alertas.db (sin GITHUB_TOKEN)")
+        return False
+    import requests
+    import base64
+    try:
+        # Obtener SHA actual del archivo (necesario para actualizar)
+        url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{GITHUB_ALERTAS_PATH}?ref=data"
+        headers = {"Authorization": f"token {GITHUB_TOKEN}"}
+        resp = requests.get(url, headers=headers, timeout=15)
+        sha = resp.json().get("sha") if resp.status_code == 200 else None
+
+        # Leer archivo local
+        with open(ARCHIVO_ALERTAS_DB, "rb") as f:
+            content = base64.b64encode(f.read()).decode()
+
+        # Subir via Contents API
+        payload = {
+            "message": "Actualizar alertas.db",
+            "content": content,
+            "branch": "data",
+        }
+        if sha:
+            payload["sha"] = sha
+
+        resp = requests.put(url.split("?")[0], json=payload, headers=headers, timeout=30)
+        resp.raise_for_status()
+        print("[Alertas] alertas.db subida a GitHub")
+        return True
+    except Exception as e:
+        print(f"[Alertas] Error subiendo alertas.db: {e}")
+        return False
+
+
 def _refresh_loop():
     """Thread daemon que re-descarga precios.db y verifica alertas periodicamente."""
     while True:
@@ -62,12 +119,15 @@ def _refresh_loop():
             descargar_precios_db()
             print("[Refresh] Verificando alertas...")
             verificar_alertas(ARCHIVO_DB, ARCHIVO_ALERTAS_DB)
+            subir_alertas_db()
         except Exception as e:
             print(f"[Refresh] Error: {e}")
 
 
-# --- Startup: descargar precios y verificar alertas ---
+# --- Startup: descargar precios y alertas, verificar alertas ---
 descargar_precios_db()
+descargar_alertas_db()
+inicializar_alertas(ARCHIVO_ALERTAS_DB)
 try:
     print("[Startup] Verificando alertas...")
     verificar_alertas(ARCHIVO_DB, ARCHIVO_ALERTAS_DB)
@@ -1201,6 +1261,7 @@ def alerta_confirmar(token):
     alerta = confirmar_alerta(ARCHIVO_ALERTAS_DB, token)
     if not alerta:
         abort(404)
+    threading.Thread(target=subir_alertas_db, daemon=True).start()
 
     precio_fmt = f"${alerta['precio_objetivo']:,}".replace(",", ".")
     return render_template("alerta_estado.html",
@@ -1215,6 +1276,7 @@ def alerta_cancelar(token):
     alerta = cancelar_alerta(ARCHIVO_ALERTAS_DB, token)
     if not alerta:
         abort(404)
+    threading.Thread(target=subir_alertas_db, daemon=True).start()
 
     return render_template("alerta_estado.html",
                            estado="cancelada",
@@ -1604,10 +1666,6 @@ def sitemap_xml():
 # ALERTAS DE PRECIO
 # =============================================================
 
-# Inicializar tablas de alertas al arrancar
-inicializar_alertas(ARCHIVO_ALERTAS_DB)
-
-
 @app.route("/api/alerta/suscribir", methods=["POST"])
 def alerta_suscribir():
     """Crea una nueva alerta de precio."""
@@ -1644,6 +1702,7 @@ def alerta_suscribir():
     )
 
     enviar_email_confirmacion(token, email, nombre_display, precio_objetivo)
+    threading.Thread(target=subir_alertas_db, daemon=True).start()
 
     return jsonify({"ok": True})
 
