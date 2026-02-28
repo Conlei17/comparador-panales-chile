@@ -67,3 +67,9 @@ jobs:
           # Solo commitear si hay cambios
           git diff --staged --quiet || git commit -m "Actualizar precios $(date -u +%Y-%m-%d)"
           git push origin data
+
+      - name: Reiniciar app en Render
+        if: env.RENDER_DEPLOY_HOOK != ''
+        env:
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+        run: curl -s "$RENDER_DEPLOY_HOOK" > /dev/null
