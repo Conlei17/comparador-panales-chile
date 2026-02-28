@@ -305,21 +305,29 @@ def detectar_linea_panal(nombre):
 
 
 # Marcas conocidas de fórmulas (para remover del nombre al extraer variante)
-FORMULA_MARCAS = ["nan", "similac", "enfamil", "nidal", "s-26", "s26", "alula", "nutrilon", "blemil", "nido"]
+FORMULA_MARCAS = ["nestlé nan", "nestle nan", "nan", "similac", "enfamil",
+                  "nidal", "s-26", "s26", "alula", "nutrilon", "blemil", "nido",
+                  "althera"]
 
-# Prefijos comunes de fórmulas
+# Prefijos comunes de fórmulas (incluyendo typos encontrados en la data)
 FORMULA_PREFIJOS = [
     "fórmula infantil", "formula infantil",
+    "fómula infantil",
     "fórmula láctea", "formula lactea",
+    "fórmula lactantes sensitive", "formula lactantes sensitive",
+    "fórmula continuación lactantes", "formula continuacion lactantes",
+    "fórmula inicio lactantes", "formula inicio lactantes",
+    "alimento para bebé", "alimento para bebe",
     "leche en polvo",
     "leche infantil",
+    "láctea",
 ]
 
 
 def detectar_variante_formula(nombre):
     """
     Extrae variante y etapa de una fórmula infantil.
-    "Fórmula Infantil Nan 1 Optipro 800g" → "Optipro 1"
+    "Fórmula Infantil Nan 1 Optipro 800g" → "1 Optipro"
     "Fórmula Infantil Nan Expertpro Ae 800g" → "Expertpro Ae"
     "Similac Total Comfort 1&2 360g" → "Total Comfort 1&2"
     "Fórmula Láctea Nidal Inicio 800g" → "Inicio"
@@ -329,27 +337,63 @@ def detectar_variante_formula(nombre):
 
     texto = nombre.strip()
 
-    # 1. Remover prefijos
+    # 0. Limpiar simbolos especiales (® etc.)
+    texto = texto.replace("®", "").strip()
+
+    # 1. Remover prefijos (puede haber varios encadenados)
+    for _ in range(2):
+        texto_lower = texto.lower()
+        for prefijo in FORMULA_PREFIJOS:
+            if texto_lower.startswith(prefijo):
+                texto = texto[len(prefijo):].strip()
+                break
+
+    # 2. Remover marca conocida (al inicio, intentar dos veces por marcas compuestas)
+    for _ in range(2):
+        texto_lower = texto.lower()
+        for marca in FORMULA_MARCAS:
+            if texto_lower.startswith(marca + " ") or texto_lower == marca:
+                texto = texto[len(marca):].strip()
+                break
+
+    # 3. Remover peso al final (800g, 1.4kg, 400 grs, etc.)
+    texto = re.sub(r'\s*\d+[\.,]?\d*\s*(?:g|grs|gr|gramos|kg)\s*$', '', texto, flags=re.IGNORECASE).strip()
+
+    # 4. Remover rangos de edad entre parentesis: (0-6 meses), (+1 año), etc.
+    texto = re.sub(r'\s*\([\d+\-\s]*(?:mes(?:es)?|año|anos)\)\s*', ' ', texto, flags=re.IGNORECASE).strip()
+
+    # 5. Remover etiquetas de etapa redundantes despues del numero
+    #    "1 Inicio Optipro" -> "1 Optipro", "3 Junior L-Comfortis" -> "3 L-Comfortis"
+    texto = re.sub(r'^(\d)\s+(?:inicio|continuación|continuacion|junior)\s+', r'\1 ', texto, flags=re.IGNORECASE).strip()
+    # Tambien al inicio sin numero: "Inicio" suelto, "Continuación" suelto
+    texto = re.sub(r'^(?:infantil|continuación|continuacion|inicio)\s+', '', texto, flags=re.IGNORECASE).strip()
+
+    # 6. Remover marca que aparece al final ("Sin Lactosa Nan" -> "Sin Lactosa")
     texto_lower = texto.lower()
-    for prefijo in FORMULA_PREFIJOS:
-        if texto_lower.startswith(prefijo):
-            texto = texto[len(prefijo):].strip()
-            texto_lower = texto.lower()
-            break
-
-    # 2. Remover marca conocida (primera palabra o dos)
     for marca in FORMULA_MARCAS:
-        if texto_lower.startswith(marca + " ") or texto_lower == marca:
-            texto = texto[len(marca):].strip()
-            texto_lower = texto.lower()
+        if texto_lower.endswith(" " + marca):
+            texto = texto[:-(len(marca) + 1)].strip()
             break
 
-    # 3. Remover peso al final (800g, 1.4kg, etc.)
-    texto = re.sub(r'\s*\d+[\.,]?\d*\s*(?:g|gr|kg)\s*$', '', texto, flags=re.IGNORECASE).strip()
+    # 7. Remover "Pack 2x", "Multipack 2x", "Bib", "Caja", "Tarro", "Polvo", "Para Bebés"
+    texto = re.sub(r'\s*(?:multi)?pack\s*\d*x?\d*\s*$', '', texto, flags=re.IGNORECASE).strip()
+    texto = re.sub(r'\s*(?:bib|caja|tarro|polvo|para beb[eé]s?)\s*$', '', texto, flags=re.IGNORECASE).strip()
 
-    # 4. Remover separadores sueltos
+    # 8. Remover separadores sueltos y comas
     texto = re.sub(r'\s*-\s*$', '', texto).strip()
     texto = re.sub(r'^\s*-\s*', '', texto).strip()
+    texto = re.sub(r',\s*$', '', texto).strip()
+
+    # 9. Normalizar espacios multiples
+    texto = re.sub(r'\s+', ' ', texto).strip()
+
+    # 10. Normalizar guiones vs espacios en nombres compuestos
+    #     "L Comfortis" / "L-Comfortis" -> "L-Comfortis"
+    #     "Expert Pro" / "Expertpro" -> "Expertpro"
+    texto = re.sub(r'\bL[\s-]Comfortis\b', 'L-Comfortis', texto, flags=re.IGNORECASE)
+    texto = re.sub(r'\bExpert[\s-]?Pro\b', 'Expertpro', texto, flags=re.IGNORECASE)
+    texto = re.sub(r'\bExper(?:t)?pro\b', 'Expertpro', texto, flags=re.IGNORECASE)
+    texto = re.sub(r'\bSupreme[\s-]?Pro\b', 'Supremepro', texto, flags=re.IGNORECASE)
 
     if not texto:
         return None
@@ -479,11 +523,13 @@ def obtener_opciones_filtros():
                     lineas_data[categoria][marca] = set()
                 lineas_data[categoria][marca].add(linea)
 
-        # Recopilar nombres de productos para Fórmulas Infantiles
+        # Recopilar variantes de productos para Fórmulas Infantiles
         if categoria == "Fórmulas Infantiles":
-            if marca not in productos_formulas:
-                productos_formulas[marca] = set()
-            productos_formulas[marca].add(nombre)
+            variante = detectar_variante_formula(nombre)
+            if variante:
+                if marca not in productos_formulas:
+                    productos_formulas[marca] = set()
+                productos_formulas[marca].add(variante)
 
     opciones = {}
 
@@ -664,8 +710,12 @@ def buscar_productos(marca=None, talla=None, tallas_edad=None,
         if linea and detectar_linea_panal(producto["nombre"]) != linea:
             continue
 
-        if producto_param and producto["nombre"] != producto_param:
-            continue
+        if producto_param:
+            if producto["categoria"] == "Fórmulas Infantiles":
+                if detectar_variante_formula(producto["nombre"]) != producto_param:
+                    continue
+            elif producto["nombre"] != producto_param:
+                continue
 
         # Para categorías que no son fórmulas, exigir precio_por_unidad
         if producto["categoria"] != "Fórmulas Infantiles" and not producto.get("precio_por_unidad"):
