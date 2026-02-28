@@ -137,6 +137,13 @@
           </select>
         </div>
 
+        <div class="filtro-grupo" id="lineaGrupo" style="display:none">
+          <label for="linea">Linea</label>
+          <select name="linea" id="linea" data-initial="{{ linea_sel }}">
+            <option value="">Todas las lineas</option>
+          </select>
+        </div>
+
         <div class="filtro-grupo" id="tallaGrupo">
           <label for="talla">Talla</label>
           <select name="talla" id="talla">
@@ -558,13 +565,15 @@
       var opciones = {{ opciones_filtros|tojson }};
       var categoriaSelect = document.getElementById('categoria');
       var marcaSelect = document.getElementById('marca');
+      var lineaSelect = document.getElementById('linea');
+      var lineaGrupo = document.getElementById('lineaGrupo');
       var tallaSelect = document.getElementById('talla');
       var tallaGrupo = document.getElementById('tallaGrupo');
       var productoSelect = document.getElementById('producto');
       var productoGrupo = document.getElementById('productoGrupo');
 
       function repoblarSelect(select, valores, valorActual, textoDefault) {
-        var prev = valorActual || select.value;
+        var prev = valorActual || select.value || select.getAttribute('data-initial') || '';
         select.innerHTML = '';
         var optDefault = document.createElement('option');
         optDefault.value = '';
@@ -586,7 +595,7 @@
         }
       }
 
-      function actualizarCascada(mantenerMarca, mantenerTalla, mantenerProducto) {
+      function actualizarCascada(mantenerMarca, mantenerTalla, mantenerProducto, mantenerLinea) {
         var cat = categoriaSelect.value;
         var datos = opciones[cat] || opciones[''] || {marcas: [], tallas_por_marca: {}};
 
@@ -594,9 +603,11 @@
         repoblarSelect(marcaSelect, datos.marcas, mantenerMarca ? undefined : null, 'Todas las marcas');
 
         if (cat === 'Fórmulas Infantiles') {
-          // Ocultar talla, mostrar producto
+          // Ocultar talla y linea, mostrar producto
           tallaGrupo.style.display = 'none';
           tallaSelect.value = '';
+          lineaGrupo.style.display = 'none';
+          lineaSelect.value = '';
           productoGrupo.style.display = '';
           var marca = marcaSelect.value;
           var productosDisponibles = (datos.productos_por_marca && datos.productos_por_marca[marca]) || datos.productos_por_marca[''] || [];
@@ -604,29 +615,45 @@
         } else if (cat === 'Toallitas Húmedas') {
           tallaGrupo.style.display = 'none';
           tallaSelect.value = '';
+          lineaGrupo.style.display = 'none';
+          lineaSelect.value = '';
           productoGrupo.style.display = 'none';
           productoSelect.value = '';
         } else {
-          // Mostrar talla, ocultar producto
+          // Pañales o Pañales de Agua: mostrar talla y linea, ocultar producto
           tallaGrupo.style.display = '';
           productoGrupo.style.display = 'none';
           productoSelect.value = '';
           var marca = marcaSelect.value;
           var tallasDisponibles = (datos.tallas_por_marca && datos.tallas_por_marca[marca]) || datos.tallas_por_marca[''] || [];
           repoblarSelect(tallaSelect, tallasDisponibles, mantenerTalla ? undefined : null, 'Todas las tallas');
+
+          // Linea de producto
+          if (datos.lineas_por_marca) {
+            lineaGrupo.style.display = '';
+            var lineasDisponibles = (datos.lineas_por_marca[marca]) || datos.lineas_por_marca[''] || [];
+            repoblarSelect(lineaSelect, lineasDisponibles, mantenerLinea ? undefined : null, 'Todas las lineas');
+          } else {
+            lineaGrupo.style.display = 'none';
+            lineaSelect.value = '';
+          }
         }
       }
 
       categoriaSelect.addEventListener('change', function() {
-        actualizarCascada(false, false, false);
+        actualizarCascada(false, false, false, false);
       });
 
       marcaSelect.addEventListener('change', function() {
-        actualizarCascada(true, false, false);
+        actualizarCascada(true, false, false, false);
+      });
+
+      lineaSelect.addEventListener('change', function() {
+        // Cambiar linea no resetea marca ni talla
       });
 
       // Inicializar al cargar (respetar valores de URL)
-      actualizarCascada(true, true, true);
+      actualizarCascada(true, true, true, true);
     })();
 
     // --- Comparador lado a lado ---

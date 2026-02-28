@@ -27,6 +27,17 @@ jobs:
       - name: Instalar dependencias
         run: pip install requests beautifulsoup4 lxml
 
+      - name: Descargar precios.db existente desde rama data
+        run: |
+          mkdir -p data
+          if git ls-remote --exit-code --heads origin data > /dev/null 2>&1; then
+            echo "Descargando precios.db existente..."
+            git fetch origin data
+            git show origin/data:data/precios.db > data/precios.db 2>/dev/null || echo "No existe precios.db en rama data, se creara una nueva"
+          else
+            echo "Rama data no existe aun, se creara una nueva DB"
+          fi
+
       - name: Ejecutar scrapers
         run: python main.py
 
@@ -41,7 +52,7 @@ jobs:
           # Verificar si la rama data existe en el remote
           if git ls-remote --exit-code --heads origin data > /dev/null 2>&1; then
             git fetch origin data
-            git checkout -b data origin/data
+            git checkout -f -b data origin/data
           else
             # Crear rama orphan (sin historial de main)
             git checkout --orphan data

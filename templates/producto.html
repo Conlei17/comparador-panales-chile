@@ -124,7 +124,11 @@
           <span class="producto-hero-marca">{{ grupo.marca }}</span>
           {% if grupo.talla %}
             <span class="producto-hero-sep">&middot;</span>
-            <span>Talla {{ grupo.talla }}</span>
+            {% if es_formula_cat %}
+              <span>{{ grupo.talla }}</span>
+            {% else %}
+              <span>Talla {{ grupo.talla }}</span>
+            {% endif %}
           {% endif %}
           {% if grupo.cantidad %}
             <span class="producto-hero-sep">&middot;</span>

@@ -281,6 +281,83 @@ def detectar_talla(nombre):
     return None
 
 
+# Lineas de producto conocidas para panales (mas especifica primero)
+LINEAS_PANALES = [
+    "pants premium care", "premium care",
+    "confort sec", "comfort sec",
+    "super premium pants", "super premium", "premium",
+    "active sec", "natural care", "dermacare", "overnites",
+    "voy a dormir", "voy solito",
+    "comfort", "pants",
+    "super cool", "bio",
+]
+
+
+def detectar_linea_panal(nombre):
+    """Detecta la linea de producto de un panal a partir de su nombre."""
+    if not nombre:
+        return None
+    nombre_lower = nombre.lower()
+    for linea in LINEAS_PANALES:
+        if linea in nombre_lower:
+            return linea.title()
+    return None
+
+
+# Marcas conocidas de fórmulas (para remover del nombre al extraer variante)
+FORMULA_MARCAS = ["nan", "similac", "enfamil", "nidal", "s-26", "s26", "alula", "nutrilon", "blemil", "nido"]
+
+# Prefijos comunes de fórmulas
+FORMULA_PREFIJOS = [
+    "fórmula infantil", "formula infantil",
+    "fórmula láctea", "formula lactea",
+    "leche en polvo",
+    "leche infantil",
+]
+
+
+def detectar_variante_formula(nombre):
+    """
+    Extrae variante y etapa de una fórmula infantil.
+    "Fórmula Infantil Nan 1 Optipro 800g" → "Optipro 1"
+    "Fórmula Infantil Nan Expertpro Ae 800g" → "Expertpro Ae"
+    "Similac Total Comfort 1&2 360g" → "Total Comfort 1&2"
+    "Fórmula Láctea Nidal Inicio 800g" → "Inicio"
+    """
+    if not nombre:
+        return None
+
+    texto = nombre.strip()
+
+    # 1. Remover prefijos
+    texto_lower = texto.lower()
+    for prefijo in FORMULA_PREFIJOS:
+        if texto_lower.startswith(prefijo):
+            texto = texto[len(prefijo):].strip()
+            texto_lower = texto.lower()
+            break
+
+    # 2. Remover marca conocida (primera palabra o dos)
+    for marca in FORMULA_MARCAS:
+        if texto_lower.startswith(marca + " ") or texto_lower == marca:
+            texto = texto[len(marca):].strip()
+            texto_lower = texto.lower()
+            break
+
+    # 3. Remover peso al final (800g, 1.4kg, etc.)
+    texto = re.sub(r'\s*\d+[\.,]?\d*\s*(?:g|gr|kg)\s*$', '', texto, flags=re.IGNORECASE).strip()
+
+    # 4. Remover separadores sueltos
+    texto = re.sub(r'\s*-\s*$', '', texto).strip()
+    texto = re.sub(r'^\s*-\s*', '', texto).strip()
+
+    if not texto:
+        return None
+
+    # Normalizar: Title Case
+    return texto.strip().title()
+
+
 def query_excluir_no_panales():
     """Retorna clausula SQL allowlist + exclusion de productos de adulto."""
     incluir = " OR ".join(f"LOWER(p.nombre) LIKE '{pat}'" for pat in INCLUIR_PATRONES)
@@ -373,6 +450,7 @@ def obtener_opciones_filtros():
     # Recopilar datos: categoria -> marca -> set de tallas
     datos = {}  # {categoria: {marca: set(tallas)}}
     productos_formulas = {}  # {marca: set(nombres)}
+    lineas_data = {}  # {categoria: {marca: set(lineas)}}
     for row in rows:
         nombre = row["nombre"]
         marca = normalizar_marca(row["marca"])
@@ -390,6 +468,16 @@ def obtener_opciones_filtros():
             datos[categoria][marca] = set()
         if talla:
             datos[categoria][marca].add(talla)
+
+        # Recopilar lineas de producto para pañales
+        if categoria in ("Pañales", "Pañales de Agua"):
+            linea = detectar_linea_panal(nombre)
+            if linea:
+                if categoria not in lineas_data:
+                    lineas_data[categoria] = {}
+                if marca not in lineas_data[categoria]:
+                    lineas_data[categoria][marca] = set()
+                lineas_data[categoria][marca].add(linea)
 
         # Recopilar nombres de productos para Fórmulas Infantiles
         if categoria == "Fórmulas Infantiles":
@@ -418,6 +506,16 @@ def obtener_opciones_filtros():
             "marcas": marcas_lista,
             "tallas_por_marca": tallas_por_marca,
         }
+
+        # Para pañales, agregar lineas_por_marca
+        if cat in ("Pañales", "Pañales de Agua") and cat in lineas_data:
+            lineas_por_marca = {}
+            todas_lineas = set()
+            for m, lineas_set in lineas_data[cat].items():
+                lineas_por_marca[m] = sorted(lineas_set)
+                todas_lineas.update(lineas_set)
+            lineas_por_marca[""] = sorted(todas_lineas)
+            cat_opciones["lineas_por_marca"] = lineas_por_marca
 
         # Para Fórmulas Infantiles, agregar productos_por_marca
         if cat == "Fórmulas Infantiles":
@@ -477,7 +575,8 @@ def obtener_precio_maximo():
 
 def buscar_productos(marca=None, talla=None, tallas_edad=None,
                      tiendas_sel=None, precio_max=None, busqueda=None,
-                     categoria=None, producto_param=None, orden="precio_por_unidad"):
+                     categoria=None, producto_param=None, orden="precio_por_unidad",
+                     linea=None):
     """
     Busca productos con los filtros aplicados.
     Solo retorna precios de la ultima ejecucion del scraper.
@@ -560,6 +659,9 @@ def buscar_productos(marca=None, talla=None, tallas_edad=None,
             continue
 
         if categoria and producto["categoria"] != categoria:
+            continue
+
+        if linea and detectar_linea_panal(producto["nombre"]) != linea:
             continue
 
         if producto_param and producto["nombre"] != producto_param:
@@ -736,7 +838,6 @@ def obtener_productos_agrupados():
     for row in rows:
         r = dict(row)
         marca_norm = normalizar_marca(r["marca"])
-        talla = detectar_talla(r["nombre"])
         cantidad = r["tamano_unidades"]
         categoria = detectar_categoria(r["nombre"])
 
@@ -744,9 +845,16 @@ def obtener_productos_agrupados():
         if categoria != "Fórmulas Infantiles" and not r.get("precio_por_unidad"):
             continue
 
-        key = (marca_norm.lower() if marca_norm else "", talla or "", cantidad or 0)
+        if categoria == "Fórmulas Infantiles":
+            variante = detectar_variante_formula(r["nombre"])
+            key = (marca_norm.lower() if marca_norm else "", variante or "", cantidad or 0)
+            r["talla"] = variante  # reusar campo para mostrar en UI
+        else:
+            talla = detectar_talla(r["nombre"])
+            key = (marca_norm.lower() if marca_norm else "", talla or "", cantidad or 0)
+            r["talla"] = talla
+
         r["marca_normalizada"] = marca_norm
-        r["talla"] = talla
         r["categoria"] = categoria
         grupos_raw[key].append(r)
 
@@ -756,12 +864,21 @@ def obtener_productos_agrupados():
     slugs_vistos = {}  # para detectar colisiones
 
     for key, ofertas in grupos_raw.items():
-        marca_norm_lower, talla, cantidad = key
+        marca_norm_lower, variante_key, cantidad = key
         if not marca_norm_lower:
             continue
 
-        # Nombre canonico = el mas corto
-        nombre_canonico = min((o["nombre"] for o in ofertas), key=len)
+        # Categoria (todas las ofertas deberian ser la misma)
+        categoria = ofertas[0]["categoria"]
+
+        # Nombre canonico
+        if categoria == "Fórmulas Infantiles" and marca_norm_lower and variante_key:
+            marca_display = ofertas[0]["marca_normalizada"]
+            nombre_canonico = f"{marca_display} {variante_key}"
+            if cantidad:
+                nombre_canonico += f" {int(cantidad)}g"
+        else:
+            nombre_canonico = min((o["nombre"] for o in ofertas), key=len)
 
         # Imagen = primera no nula
         imagen = None
@@ -770,8 +887,6 @@ def obtener_productos_agrupados():
                 imagen = o["imagen_url"]
                 break
 
-        # Categoria (todas las ofertas deberian ser la misma)
-        categoria = ofertas[0]["categoria"]
         cat_slug = CATEGORIAS_SLUG_INV.get(categoria, "")
         if not cat_slug:
             continue
@@ -784,7 +899,10 @@ def obtener_productos_agrupados():
 
         # Manejar colisiones
         if slug_base in slugs_vistos and slugs_vistos[slug_base] != key:
-            slug_base = f"{slug_base}-{cantidad}u" if cantidad else f"{slug_base}-{id(key)}"
+            if categoria == "Fórmulas Infantiles":
+                slug_base = f"{slug_base}-{int(cantidad)}g" if cantidad else slug_base
+            else:
+                slug_base = f"{slug_base}-{cantidad}u" if cantidad else f"{slug_base}-{id(key)}"
 
         slugs_vistos[slug_base] = key
 
@@ -797,7 +915,7 @@ def obtener_productos_agrupados():
             "cat_slug": cat_slug,
             "marca_slug": marca_slug,
             "marca": marca_norm,
-            "talla": talla,
+            "talla": variante_key,
             "cantidad": cantidad,
             "categoria": categoria,
             "ids": producto_ids,
@@ -817,9 +935,16 @@ def obtener_productos_agrupados():
 def obtener_url_detalle(producto):
     """Dado un producto (dict), retorna la URL de detalle si existe un grupo."""
     marca_norm = normalizar_marca(producto.get("marca", ""))
-    talla = detectar_talla(producto.get("nombre", ""))
+    nombre = producto.get("nombre", "")
     cantidad = producto.get("tamano_unidades") or 0
-    key = (marca_norm.lower() if marca_norm else "", talla or "", cantidad)
+    categoria = detectar_categoria(nombre)
+
+    if categoria == "Fórmulas Infantiles":
+        variante = detectar_variante_formula(nombre)
+        key = (marca_norm.lower() if marca_norm else "", variante or "", cantidad)
+    else:
+        talla = detectar_talla(nombre)
+        key = (marca_norm.lower() if marca_norm else "", talla or "", cantidad)
 
     grupos, _ = obtener_productos_agrupados()
     grupo = grupos.get(key)
@@ -844,6 +969,7 @@ def _render_index(categoria_path="", marca_path="", talla_path=""):
     marca_sel = marca_path or request.args.get("marca", "")
     talla_sel = talla_path or request.args.get("talla", "")
     categoria_sel = categoria_path or request.args.get("categoria", "")
+    linea_sel = request.args.get("linea", "")
     producto_sel = request.args.get("producto", "")
     tiendas_sel = request.args.getlist("tiendas")
     precio_max_str = request.args.get("precio_max", "")
@@ -861,7 +987,7 @@ def _render_index(categoria_path="", marca_path="", talla_path=""):
             pass
 
     # Determinar si hay algun filtro activo
-    hay_filtro = bool(marca_sel or talla_sel or categoria_sel or producto_sel or tiendas_sel or precio_max)
+    hay_filtro = bool(marca_sel or talla_sel or categoria_sel or linea_sel or producto_sel or tiendas_sel or precio_max)
 
     # Buscar productos
     productos = []
@@ -879,6 +1005,7 @@ def _render_index(categoria_path="", marca_path="", talla_path=""):
             categoria=categoria_sel or None,
             producto_param=producto_sel or None,
             orden=orden_actual,
+            linea=linea_sel or None,
         )
         # Agregar url_detalle a cada producto
         for p in productos:
@@ -983,6 +1110,7 @@ def _render_index(categoria_path="", marca_path="", talla_path=""):
         marca_sel=marca_sel,
         talla_sel=talla_sel,
         categoria_sel=categoria_sel,
+        linea_sel=linea_sel,
         producto_sel=producto_sel,
         tiendas_sel=tiendas_sel,
         precio_max=precio_max,
