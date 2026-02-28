@@ -41,7 +41,7 @@ jobs:
           # Verificar si la rama data existe en el remote
           if git ls-remote --exit-code --heads origin data > /dev/null 2>&1; then
             git fetch origin data
-            git checkout data
+            git checkout -b data origin/data
           else
             # Crear rama orphan (sin historial de main)
             git checkout --orphan data
