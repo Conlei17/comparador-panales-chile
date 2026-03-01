@@ -329,7 +329,12 @@ def verificar_alertas(precios_db_path, alertas_db_path=None):
         nombre_producto = None
         url_tienda = None
 
-        if alerta["tipo"] == "producto" and alerta["producto_id"]:
+        # Si tipo es "producto" pero no hay producto_id, tratar como grupo
+        tipo_efectivo = alerta["tipo"]
+        if tipo_efectivo == "producto" and not alerta["producto_id"] and alerta["marca"]:
+            tipo_efectivo = "grupo"
+
+        if tipo_efectivo == "producto" and alerta["producto_id"]:
             # Buscar precio actual del producto especifico
             cursor_precios.execute("""
                 SELECT pr.precio, pr.precio_por_unidad, t.nombre as tienda,
@@ -348,7 +353,7 @@ def verificar_alertas(precios_db_path, alertas_db_path=None):
                 nombre_producto = row["nombre"]
                 url_tienda = row["url"]
 
-        elif alerta["tipo"] == "grupo":
+        elif tipo_efectivo == "grupo":
             # Buscar mejor PPU en grupo marca+talla+cantidad
             query = """
                 SELECT pr.precio, pr.precio_por_unidad, t.nombre as tienda,
