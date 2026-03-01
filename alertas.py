@@ -24,6 +24,36 @@ RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
 EMAIL_FROM = "Alertas BabyAhorro <alertas@babyahorro.cl>"
 BASE_URL = os.environ.get("BASE_URL", "https://babyahorro.cl")
 
+CATEGORIAS_SLUG_MAP = {
+    "Pañales": "panales",
+    "Pañales de Agua": "panales-de-agua",
+    "Toallitas Húmedas": "toallitas",
+    "Fórmulas Infantiles": "formulas",
+}
+
+
+def _slugify(texto):
+    """Convierte texto a slug URL-friendly."""
+    import unicodedata
+    if not texto:
+        return ""
+    texto = unicodedata.normalize("NFKD", texto.strip())
+    texto = "".join(c for c in texto if not unicodedata.combining(c))
+    texto = texto.lower().replace("+", "-plus")
+    texto = re.sub(r"[^a-z0-9]+", "-", texto).strip("-")
+    return texto
+
+
+def construir_url_alerta(categoria, marca, talla):
+    """Construye URL amigable para el email de alerta."""
+    cat_slug = CATEGORIAS_SLUG_MAP.get(categoria)
+    if not cat_slug or not marca:
+        return None
+    marca_slug = _slugify(marca)
+    if talla:
+        return f"/{cat_slug}/{marca_slug}/talla-{_slugify(talla)}/"
+    return f"/{cat_slug}/{marca_slug}/"
+
 
 def detectar_talla(nombre):
     """Extrae la talla de un producto a partir de su nombre."""
@@ -399,11 +429,14 @@ def verificar_alertas(precios_db_path, alertas_db_path=None):
 
         # Verificar si el precio esta por debajo del objetivo
         if precio_actual <= alerta["precio_objetivo"]:
+            url_producto = construir_url_alerta(
+                alerta.get("categoria"), alerta.get("marca"), alerta.get("talla"))
             enviado = enviar_email_alerta(
                 alerta=alerta,
                 precio_actual=precio_actual,
                 tienda=tienda,
                 nombre_producto=nombre_producto or alerta["nombre_display"],
+                url_producto=url_producto,
                 url_tienda=url_tienda,
             )
 
