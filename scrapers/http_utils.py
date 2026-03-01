@@ -6,6 +6,7 @@ requests.get() directamente, para obtener reintentos automaticos
 ante errores transitorios (timeouts, 503, etc.).
 """
 
+import random
 import time
 
 import requests
@@ -18,16 +19,45 @@ ERRORES_REINTENTABLES = (
 
 CODIGOS_REINTENTABLES = {429, 500, 502, 503, 504}
 
+# Pool de User-Agents reales para rotar entre requests.
+# Evita fingerprinting por UA estatico.
+_USER_AGENTS = [
+    # Chrome 120 – macOS
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    # Chrome 122 – macOS
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+    # Chrome 123 – Windows
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+    # Chrome 124 – macOS
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    # Chrome 125 – Windows
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+    # Firefox 124 – macOS
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:124.0) Gecko/20100101 Firefox/124.0",
+    # Firefox 125 – Windows
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:125.0) Gecko/20100101 Firefox/125.0",
+    # Safari 17 – macOS
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3 Safari/605.1.15",
+    # Edge 122 – Windows
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36 Edg/122.0.0.0",
+    # Chrome 124 – Linux
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+]
+
 
 def _hacer_request(url, headers, timeout=15, max_reintentos=3, params=None):
     """
     GET con reintentos y backoff exponencial.
+    Rota el User-Agent en cada intento.
 
     Retorna el objeto Response o None si todos los intentos fallaron.
     """
     for intento in range(max_reintentos):
         try:
-            resp = requests.get(url, headers=headers, timeout=timeout, params=params)
+            # Copiar headers y rotar User-Agent
+            h = dict(headers) if headers else {}
+            h["User-Agent"] = random.choice(_USER_AGENTS)
+            resp = requests.get(url, headers=h, timeout=timeout, params=params)
             if resp.status_code in CODIGOS_REINTENTABLES:
                 espera = 2 ** (intento + 1)
                 print(f"  HTTP {resp.status_code}, reintentando en {espera}s...")
