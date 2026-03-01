@@ -123,6 +123,14 @@ def inicializar_db():
         -- Indice para buscar precios por producto
         CREATE INDEX IF NOT EXISTS idx_precios_producto
             ON precios(producto_id);
+
+        -- Indice para buscar productos por marca (filtros en app.py)
+        CREATE INDEX IF NOT EXISTS idx_productos_marca
+            ON productos(marca);
+
+        -- Indice para buscar precios por tienda (JOINs en app.py)
+        CREATE INDEX IF NOT EXISTS idx_precios_tienda
+            ON precios(tienda_id);
     """)
 
     # Agregar columna imagen_url a productos si no existe

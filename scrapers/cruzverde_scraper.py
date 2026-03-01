@@ -27,8 +27,8 @@ except ImportError:
 # Endpoint de la API OCAPI de Cruz Verde
 API_URL = "https://beta.cruzverde.cl/s/Chile/dw/shop/v19_1/product_search"
 
-# Client ID publico para acceder a la API
-CLIENT_ID = "c19ce24d-1677-4754-b9f7-c193997c5a92"
+# Client ID para acceder a la API (configurable via variable de entorno)
+CLIENT_ID = os.environ.get("CRUZVERDE_CLIENT_ID", "c19ce24d-1677-4754-b9f7-c193997c5a92")
 
 # Cantidad de productos por pagina
 PRODUCTOS_POR_PAGINA = 24
