@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ titulo_pagina }}</title>
+  <meta name="description" content="{{ meta_descripcion }}">
+  <link rel="canonical" href="{{ canonical_url }}">
+  <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon-32x32.png') }}">
+  <link rel="icon" type="image/png" sizes="192x192" href="{{ url_for('static', filename='favicon-192x192.png') }}">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+  <meta name="theme-color" content="#f4b8a8">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="{{ titulo_pagina }}">
+  <meta property="og:description" content="{{ meta_descripcion }}">
+  <meta property="og:image" content="{{ url_for('static', filename='og-image.png', _external=True) }}">
+  <meta property="og:url" content="{{ canonical_url }}">
+
+  <!-- Twitter Cards -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="{{ titulo_pagina }}">
+  <meta name="twitter:description" content="{{ meta_descripcion }}">
+
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-H2K7K5G7C2"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-H2K7K5G7C2');
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script>
+    if (localStorage.getItem('darkMode') === 'true') {
+      document.documentElement.style.visibility = 'hidden';
+    }
+  </script>
+</head>
+<body>
+
+  <script>
+    if (localStorage.getItem('darkMode') === 'true') {
+      document.body.classList.add('dark');
+      document.documentElement.style.visibility = '';
+    }
+  </script>
+
+  <!-- Header -->
+  <header class="header">
+    <button class="dark-toggle" onclick="toggleDark()" title="Cambiar tema" id="darkToggle">&#9790;</button>
+    <a href="/"><img src="{{ url_for('static', filename='logo.png') }}" alt="BabyAhorro" class="header-logo"></a>
+    <p class="header-tagline">Ahorro real para familias reales</p>
+    <nav class="nav">
+      <a href="/" class="nav-link">Comparar precios</a>
+      <a href="/historico" class="nav-link nav-link--active">Hist&oacute;rico</a>
+    </nav>
+  </header>
+
+  <div class="container">
+
+    <h1 class="h1-buscador">Hist&oacute;rico de precios</h1>
+
+    {% if total_dias %}
+    <p style="text-align:center; color: var(--text-muted, #888); margin-bottom: 1.5rem;">
+      {{ total_dias }} d&iacute;as de datos
+      {% if fecha_inicio and fecha_fin %}
+        &middot; desde {{ fecha_inicio }} hasta {{ fecha_fin }}
+      {% endif %}
+    </p>
+    {% endif %}
+
+    <!-- Filtros -->
+    <form class="filtros" method="GET" action="/historico" id="formHistorico">
+      <div class="filtros-grid">
+        <div class="filtro-grupo">
+          <label for="categoria">Categor&iacute;a</label>
+          <select name="categoria" id="categoria">
+            <option value="">Todas</option>
+            {% for cat in opciones_filtros.keys() if cat %}
+              <option value="{{ cat }}" {% if cat == categoria_sel %}selected{% endif %}>{{ cat }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="filtro-grupo">
+          <label for="marca">Marca</label>
+          <select name="marca" id="marca">
+            <option value="">Todas las marcas</option>
+          </select>
+        </div>
+
+        <div class="filtro-grupo" id="tallaGrupo">
+          <label for="talla">Talla</label>
+          <select name="talla" id="talla">
+            <option value="">Todas las tallas</option>
+          </select>
+        </div>
+
+        <div class="filtro-grupo">
+          <label for="tienda">Tienda</label>
+          <select name="tienda" id="tienda">
+            <option value="">Todas las tiendas</option>
+            {% for t in tiendas %}
+              <option value="{{ t }}" {% if t == tienda_sel %}selected{% endif %}>{{ t }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="filtro-botones">
+          <button type="submit" class="btn-buscar">Buscar</button>
+          <a href="/historico" class="btn-limpiar {{ '' if hay_filtro else 'btn-limpiar--disabled' }}">Limpiar</a>
+        </div>
+      </div>
+    </form>
+
+    {% if hay_filtro and productos_lista %}
+    <!-- Selector de producto -->
+    <div style="margin: 1.5rem 0;">
+      <label for="producto_select" style="font-weight: 600; margin-bottom: 0.5rem; display: block;">
+        Selecciona un producto para ver su hist&oacute;rico ({{ productos_lista|length }} encontrados):
+      </label>
+      <select id="producto_select" onchange="seleccionarProducto(this.value)"
+              style="width: 100%; padding: 0.6rem 0.8rem; border-radius: 8px; border: 1px solid var(--border, #ddd); font-size: 0.95rem; background: var(--bg-card, #fff); color: var(--text, #333);">
+        <option value="">-- Elige un producto --</option>
+        {% for p in productos_lista %}
+          <option value="{{ p.id }}" {% if p.id|string == producto_id|string %}selected{% endif %}>
+            {{ p.nombre }} ({{ p.tienda }})
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+    {% elif hay_filtro and not productos_lista %}
+    <div style="text-align: center; padding: 2rem; color: var(--text-muted, #888);">
+      No se encontraron productos con esos filtros. Prueba con filtros m&aacute;s amplios.
+    </div>
+    {% endif %}
+
+    {% if producto_info and datos_historico %}
+    <!-- Info del producto seleccionado -->
+    <div style="background: var(--bg-card, #fff); border-radius: 12px; padding: 1.5rem; margin: 1.5rem 0; box-shadow: 0 1px 4px rgba(0,0,0,0.06);">
+      <h2 style="margin: 0 0 0.5rem 0; font-size: 1.2rem;">{{ producto_info.nombre }}</h2>
+      <p style="margin: 0; color: var(--text-muted, #888);">
+        {{ producto_info.marca }}
+        {% if producto_info.tamano_unidades %}
+          &middot; {{ producto_info.tamano_unidades }} unidades
+        {% endif %}
+        &middot; {{ producto_info.tienda }}
+        &middot; {{ datos_historico|length }} registros de precio
+      </p>
+    </div>
+
+    <!-- Grafico -->
+    <div class="historico-detalle">
+      <div class="grafico-container">
+        <canvas id="grafico-historico"></canvas>
+      </div>
+    </div>
+
+    <!-- Tabla de datos -->
+    <h2 class="seccion-titulo">Detalle de precios</h2>
+    <div class="tabla-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Precio</th>
+            <th>Precio/Unidad</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for d in datos_historico|reverse %}
+          <tr>
+            <td>{{ d.fecha_scraping[:10] }}</td>
+            <td>{{ "${:,.0f}".format(d.precio).replace(",", ".") if d.precio else '-' }}</td>
+            <td>{{ "${:,.0f}".format(d.precio_por_unidad).replace(",", ".") if d.precio_por_unidad else '-' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% elif not hay_filtro %}
+    <!-- Estado inicial: sin filtros -->
+    <div style="text-align: center; padding: 3rem 1rem; color: var(--text-muted, #888);">
+      <p style="font-size: 1.3rem; margin-bottom: 0.5rem;">Usa los filtros para buscar un producto</p>
+      <p>Selecciona al menos una categor&iacute;a o marca para ver los productos disponibles.</p>
+    </div>
+    {% endif %}
+
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    BabyAhorro &middot; Datos actualizados diariamente
+    <br>Hecho con &hearts; por una mam&aacute; primeriza
+  </footer>
+
+  <script>
+    function toggleDark() {
+      document.body.classList.toggle('dark');
+      var isDark = document.body.classList.contains('dark');
+      localStorage.setItem('darkMode', isDark);
+      document.getElementById('darkToggle').innerHTML = isDark ? '&#9788;' : '&#9790;';
+    }
+    (function() {
+      var isDark = document.body.classList.contains('dark');
+      document.getElementById('darkToggle').innerHTML = isDark ? '&#9788;' : '&#9790;';
+    })();
+  </script>
+
+  <script>
+    var opcionesFiltros = {{ opciones_filtros|tojson }};
+    var marcaSel = {{ marca_sel|tojson }};
+    var tallaSel = {{ talla_sel|tojson }};
+
+    function actualizarMarcas() {
+      var cat = document.getElementById('categoria').value;
+      var marcaSelect = document.getElementById('marca');
+      var opciones = opcionesFiltros[cat] || opcionesFiltros[''] || {};
+      var marcas = opciones.marcas || [];
+
+      var valorActual = marcaSelect.value;
+      marcaSelect.innerHTML = '<option value="">Todas las marcas</option>';
+      marcas.forEach(function(m) {
+        var opt = document.createElement('option');
+        opt.value = m;
+        opt.textContent = m;
+        if (m === marcaSel) opt.selected = true;
+        marcaSelect.appendChild(opt);
+      });
+
+      actualizarTallas();
+    }
+
+    function actualizarTallas() {
+      var cat = document.getElementById('categoria').value;
+      var marca = document.getElementById('marca').value;
+      var tallaSelect = document.getElementById('talla');
+      var tallaGrupo = document.getElementById('tallaGrupo');
+      var opciones = opcionesFiltros[cat] || opcionesFiltros[''] || {};
+      var tallasPorMarca = opciones.tallas_por_marca || {};
+      var tallas = tallasPorMarca[marca] || tallasPorMarca[''] || [];
+
+      if (tallas.length === 0) {
+        tallaGrupo.style.display = 'none';
+        tallaSelect.innerHTML = '<option value="">Todas las tallas</option>';
+        return;
+      }
+
+      tallaGrupo.style.display = '';
+      tallaSelect.innerHTML = '<option value="">Todas las tallas</option>';
+      tallas.forEach(function(t) {
+        var opt = document.createElement('option');
+        opt.value = t;
+        opt.textContent = t;
+        if (t === tallaSel) opt.selected = true;
+        tallaSelect.appendChild(opt);
+      });
+    }
+
+    document.getElementById('categoria').addEventListener('change', function() {
+      marcaSel = '';
+      tallaSel = '';
+      actualizarMarcas();
+    });
+    document.getElementById('marca').addEventListener('change', function() {
+      tallaSel = '';
+      actualizarTallas();
+    });
+
+    // Inicializar
+    actualizarMarcas();
+  </script>
+
+  <script>
+    function seleccionarProducto(productoId) {
+      if (!productoId) return;
+      var params = new URLSearchParams(window.location.search);
+      params.set('producto_id', productoId);
+      window.location.href = '/historico?' + params.toString();
+    }
+  </script>
+
+  {% if datos_historico %}
+  <script>
+    (function() {
+      var datos = {{ datos_historico|tojson }};
+
+      var fechas = datos.map(function(d) { return d.fecha_scraping.substring(0, 10); });
+      var precios = datos.map(function(d) { return d.precio; });
+      var ppus = datos.map(function(d) { return d.precio_por_unidad; });
+
+      var datasets = [];
+      datasets.push({
+        label: 'Precio',
+        data: precios,
+        borderColor: '#e8a898',
+        backgroundColor: 'rgba(232, 168, 152, 0.1)',
+        tension: 0.3,
+        pointRadius: 3,
+        pointBackgroundColor: '#e8a898',
+        fill: true,
+      });
+
+      // Solo agregar PPU si hay datos
+      var tienePPU = ppus.some(function(v) { return v !== null; });
+      if (tienePPU) {
+        datasets.push({
+          label: 'Precio/Unidad',
+          data: ppus,
+          borderColor: '#7bc68f',
+          backgroundColor: 'transparent',
+          tension: 0.3,
+          pointRadius: 3,
+          pointBackgroundColor: '#7bc68f',
+          yAxisID: 'y1',
+        });
+      }
+
+      var ctx = document.getElementById('grafico-historico').getContext('2d');
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: fechas,
+          datasets: datasets,
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: { usePointStyle: true, padding: 15 }
+            },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  var val = context.parsed.y;
+                  if (val === null) return '';
+                  return context.dataset.label + ': $' + Math.round(val).toLocaleString('es-CL').replace(/,/g, '.');
+                }
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: false,
+              position: 'left',
+              ticks: {
+                callback: function(value) {
+                  return '$' + value.toLocaleString('es-CL');
+                }
+              }
+            },
+            y1: tienePPU ? {
+              beginAtZero: false,
+              position: 'right',
+              grid: { drawOnChartArea: false },
+              ticks: {
+                callback: function(value) {
+                  return '$' + value.toLocaleString('es-CL');
+                }
+              }
+            } : undefined
+          }
+        }
+      });
+    })();
+  </script>
+  {% endif %}
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/static/sw.js').catch(function() {});
+    }
+  </script>
+
+</body>
+</html>
