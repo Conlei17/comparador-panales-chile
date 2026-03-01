@@ -124,15 +124,12 @@ def _refresh_loop():
             print(f"[Refresh] Error: {e}")
 
 
-# --- Startup: descargar precios y alertas, verificar alertas ---
+# --- Startup: descargar precios y alertas ---
 descargar_precios_db()
 descargar_alertas_db()
 inicializar_alertas(ARCHIVO_ALERTAS_DB)
-try:
-    print("[Startup] Verificando alertas...")
-    verificar_alertas(ARCHIVO_DB, ARCHIVO_ALERTAS_DB)
-except Exception as e:
-    print(f"[Startup] Error verificando alertas: {e}")
+# No verificar alertas en startup para evitar emails duplicados en cada deploy.
+# Se verifican en el primer ciclo del refresh loop.
 
 # Thread de refresh periodico
 _refresh_thread = threading.Thread(target=_refresh_loop, daemon=True)

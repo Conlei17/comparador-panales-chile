@@ -369,14 +369,37 @@ def _enviar_email_monitoreo(asunto, cuerpo_lineas):
         return False
 
 
-def verificar_conteos(productos, conn):
+# Mapeo nombre scraper -> nombre tienda en CSV
+_SCRAPER_A_TIENDA = {
+    "liquimax": "Liquimax",
+    "pepito": "Distribuidora Pepito",
+    "lapanalera": "La Pañalera",
+    "tintin": "Pañales Tin Tin",
+    "santaisabel": "Santa Isabel",
+    "jumbo": "Jumbo",
+    "ahumada": "Farmacias Ahumada",
+    "cruzverde": "Cruz Verde",
+    "salcobrand": "Salcobrand",
+}
+
+
+def verificar_conteos(productos, conn, resultados_scrapers=None):
     """
     Compara la cantidad de productos de hoy por tienda contra el
     promedio historico en la base de datos.
 
     - Siempre escribe resultado en data/monitoreo_scrapers.log
     - Si hay alertas criticas, envia email al operador
+    - Ignora tiendas cuyo scraper fallo (ya se reporto en el resumen)
     """
+    # Tiendas cuyo scraper fallo (no alertar por ellas)
+    tiendas_fallidas = set()
+    if resultados_scrapers:
+        for scraper, exito in resultados_scrapers.items():
+            if not exito:
+                tienda = _SCRAPER_A_TIENDA.get(scraper)
+                if tienda:
+                    tiendas_fallidas.add(tienda)
     # Contar productos de hoy por tienda
     conteo_hoy = {}
     for p in productos:
@@ -409,7 +432,9 @@ def verificar_conteos(productos, conn):
         if promedio and promedio > 0:
             ratio = hoy / promedio
             indicador = ""
-            if hoy == 0:
+            if tienda in tiendas_fallidas:
+                indicador = " (scraper fallo, ignorando)"
+            elif hoy == 0:
                 indicador = " << ALERTA: 0 productos!"
                 alertas.append((tienda, hoy, promedio))
             elif ratio < UMBRAL_ALERTA_PRODUCTOS:
@@ -875,7 +900,7 @@ def main():
     conn = inicializar_db()
 
     # Verificar conteos contra historico ANTES de insertar datos nuevos
-    verificar_conteos(todos_los_productos, conn)
+    verificar_conteos(todos_los_productos, conn, resultados)
 
     guardar_en_db(conn, todos_los_productos, fecha_scraping)
     conn.close()
