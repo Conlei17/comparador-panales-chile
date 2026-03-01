@@ -310,6 +310,70 @@ def guardar_en_db(conn, productos, fecha_scraping):
           f"{total_productos} productos, {dias} dia(s) de datos")
 
 
+# Umbral para alertar caida de productos (50% del promedio historico)
+UMBRAL_ALERTA_PRODUCTOS = 0.5
+
+
+def verificar_conteos(productos, conn):
+    """
+    Compara la cantidad de productos de hoy por tienda contra el
+    promedio historico en la base de datos. Imprime alertas si alguna
+    tienda tiene significativamente menos productos de lo esperado.
+    """
+    # Contar productos de hoy por tienda
+    conteo_hoy = {}
+    for p in productos:
+        tienda = p.get("tienda", "Desconocida")
+        conteo_hoy[tienda] = conteo_hoy.get(tienda, 0) + 1
+
+    # Obtener promedio historico por tienda (ultimas 10 ejecuciones)
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT t.nombre, AVG(cnt) as promedio
+        FROM (
+            SELECT tienda_id, fecha_scraping, COUNT(*) as cnt
+            FROM precios
+            GROUP BY tienda_id, DATE(fecha_scraping)
+            ORDER BY fecha_scraping DESC
+        ) sub
+        JOIN tiendas t ON t.id = sub.tienda_id
+        GROUP BY t.nombre
+    """)
+    promedios = {row[0]: row[1] for row in cursor.fetchall()}
+
+    # Comparar y alertar
+    alertas = []
+    print("\n  Monitoreo de productos por tienda:")
+    for tienda in sorted(set(list(conteo_hoy.keys()) + list(promedios.keys()))):
+        hoy = conteo_hoy.get(tienda, 0)
+        promedio = promedios.get(tienda)
+
+        if promedio and promedio > 0:
+            ratio = hoy / promedio
+            indicador = ""
+            if hoy == 0:
+                indicador = " << ALERTA: 0 productos!"
+                alertas.append(tienda)
+            elif ratio < UMBRAL_ALERTA_PRODUCTOS:
+                indicador = f" << ALERTA: {ratio:.0%} del promedio"
+                alertas.append(tienda)
+            print(f"    {tienda}: {hoy} productos (promedio: {promedio:.0f}){indicador}")
+        else:
+            print(f"    {tienda}: {hoy} productos (sin historico)")
+
+    if alertas:
+        print(f"\n  {'!' * 50}")
+        print(f"  ATENCION: {len(alertas)} tienda(s) con datos anormalmente bajos:")
+        for tienda in alertas:
+            hoy = conteo_hoy.get(tienda, 0)
+            promedio = promedios.get(tienda, 0)
+            print(f"    - {tienda}: {hoy} hoy vs {promedio:.0f} promedio")
+        print(f"  Revisar si el sitio cambio su HTML o esta caido.")
+        print(f"  {'!' * 50}")
+
+    return alertas
+
+
 # =============================================================
 # EJECUCION DE SCRAPERS
 # =============================================================
@@ -734,6 +798,10 @@ def main():
     # --- PASO 3: Guardar en base de datos SQLite ---
     print(f"\n  Guardando en base de datos SQLite ({ARCHIVO_DB})...")
     conn = inicializar_db()
+
+    # Verificar conteos contra historico ANTES de insertar datos nuevos
+    verificar_conteos(todos_los_productos, conn)
+
     guardar_en_db(conn, todos_los_productos, fecha_scraping)
     conn.close()
 
