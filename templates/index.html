@@ -986,11 +986,11 @@
         productoAlerta = datos;
         var ppuDefault = (datos.ppu || datos.precio || 0) + 1;
         modalAlerta.innerHTML = '<div class="alerta-modal-contenido">' +
-          '<div class="comparar-header"><h3>Crear alerta de precio</h3><button class="comparar-cerrar" onclick="cerrarModalAlerta()">Cerrar</button></div>' +
+          '<div class="comparar-header"><h3>Crear alerta de precio unitario</h3><button class="comparar-cerrar" onclick="cerrarModalAlerta()">Cerrar</button></div>' +
           '<p class="alerta-desc">' + datos.nombre + '</p>' +
           '<div class="alerta-inputs">' +
             '<div class="filtro-grupo"><label>Email</label><input type="email" id="modal-alerta-email" placeholder="tu@email.com" class="alerta-input"></div>' +
-            '<div class="filtro-grupo"><label>Precio objetivo</label><input type="number" id="modal-alerta-precio" value="' + ppuDefault + '" min="1" class="alerta-input"></div>' +
+            '<div class="filtro-grupo"><label>Precio objetivo ($/unidad)</label><input type="number" id="modal-alerta-precio" value="' + ppuDefault + '" min="1" class="alerta-input"></div>' +
           '</div>' +
           '<button class="btn-alerta" onclick="enviarAlertaModal()">Crear alerta</button>' +
           '<div class="alerta-mensaje" id="modalAlertaMensaje" style="display:none;"></div>' +
