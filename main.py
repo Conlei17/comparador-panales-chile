@@ -313,12 +313,69 @@ def guardar_en_db(conn, productos, fecha_scraping):
 # Umbral para alertar caida de productos (50% del promedio historico)
 UMBRAL_ALERTA_PRODUCTOS = 0.5
 
+# Log de monitoreo persistente
+ARCHIVO_LOG_MONITOREO = os.path.join(CARPETA_DATOS, "monitoreo_scrapers.log")
+
+# Email del operador para alertas criticas (variable de entorno)
+MONITOR_EMAIL = os.environ.get("MONITOR_EMAIL", "")
+
+
+def _escribir_log(lineas):
+    """Agrega lineas al log de monitoreo con timestamp."""
+    os.makedirs(os.path.dirname(ARCHIVO_LOG_MONITOREO), exist_ok=True)
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    with open(ARCHIVO_LOG_MONITOREO, "a", encoding="utf-8") as f:
+        f.write(f"\n--- {timestamp} ---\n")
+        for linea in lineas:
+            f.write(f"{linea}\n")
+
+
+def _enviar_email_monitoreo(asunto, cuerpo_lineas):
+    """Envia email de alerta de monitoreo al operador via Resend."""
+    if not MONITOR_EMAIL:
+        print("  [Monitor] Email no enviado (MONITOR_EMAIL no configurado)")
+        return False
+
+    try:
+        import resend
+    except ImportError:
+        print("  [Monitor] Email no enviado (resend no instalado)")
+        return False
+
+    api_key = os.environ.get("RESEND_API_KEY", "")
+    if not api_key:
+        print("  [Monitor] Email no enviado (RESEND_API_KEY no configurado)")
+        return False
+
+    resend.api_key = api_key
+    email_from = os.environ.get("MONITOR_EMAIL_FROM",
+                                "Monitor BabyAhorro <alertas@babyahorro.cl>")
+
+    cuerpo_html = "<h2>Alerta de monitoreo - BabyAhorro Scrapers</h2>\n<pre>\n"
+    cuerpo_html += "\n".join(cuerpo_lineas)
+    cuerpo_html += "\n</pre>"
+
+    try:
+        resend.Emails.send({
+            "from": email_from,
+            "to": [MONITOR_EMAIL],
+            "subject": asunto,
+            "html": cuerpo_html,
+        })
+        print(f"  [Monitor] Email enviado a {MONITOR_EMAIL}")
+        return True
+    except Exception as e:
+        print(f"  [Monitor] Error enviando email: {e}")
+        return False
+
 
 def verificar_conteos(productos, conn):
     """
     Compara la cantidad de productos de hoy por tienda contra el
-    promedio historico en la base de datos. Imprime alertas si alguna
-    tienda tiene significativamente menos productos de lo esperado.
+    promedio historico en la base de datos.
+
+    - Siempre escribe resultado en data/monitoreo_scrapers.log
+    - Si hay alertas criticas, envia email al operador
     """
     # Contar productos de hoy por tienda
     conteo_hoy = {}
@@ -326,7 +383,7 @@ def verificar_conteos(productos, conn):
         tienda = p.get("tienda", "Desconocida")
         conteo_hoy[tienda] = conteo_hoy.get(tienda, 0) + 1
 
-    # Obtener promedio historico por tienda (ultimas 10 ejecuciones)
+    # Obtener promedio historico por tienda
     cursor = conn.cursor()
     cursor.execute("""
         SELECT t.nombre, AVG(cnt) as promedio
@@ -343,6 +400,7 @@ def verificar_conteos(productos, conn):
 
     # Comparar y alertar
     alertas = []
+    log_lineas = []
     print("\n  Monitoreo de productos por tienda:")
     for tienda in sorted(set(list(conteo_hoy.keys()) + list(promedios.keys()))):
         hoy = conteo_hoy.get(tienda, 0)
@@ -353,25 +411,42 @@ def verificar_conteos(productos, conn):
             indicador = ""
             if hoy == 0:
                 indicador = " << ALERTA: 0 productos!"
-                alertas.append(tienda)
+                alertas.append((tienda, hoy, promedio))
             elif ratio < UMBRAL_ALERTA_PRODUCTOS:
                 indicador = f" << ALERTA: {ratio:.0%} del promedio"
-                alertas.append(tienda)
-            print(f"    {tienda}: {hoy} productos (promedio: {promedio:.0f}){indicador}")
+                alertas.append((tienda, hoy, promedio))
+            linea = f"  {tienda}: {hoy} productos (promedio: {promedio:.0f}){indicador}"
         else:
-            print(f"    {tienda}: {hoy} productos (sin historico)")
+            linea = f"  {tienda}: {hoy} productos (sin historico)"
+
+        print(f"  {linea}")
+        log_lineas.append(linea)
 
     if alertas:
+        msg_alertas = [
+            f"ATENCION: {len(alertas)} tienda(s) con datos anormalmente bajos:",
+        ]
+        for tienda, hoy, promedio in alertas:
+            msg_alertas.append(f"  - {tienda}: {hoy} hoy vs {promedio:.0f} promedio")
+        msg_alertas.append("Revisar si el sitio cambio su HTML o esta caido.")
+
+        # Consola
         print(f"\n  {'!' * 50}")
-        print(f"  ATENCION: {len(alertas)} tienda(s) con datos anormalmente bajos:")
-        for tienda in alertas:
-            hoy = conteo_hoy.get(tienda, 0)
-            promedio = promedios.get(tienda, 0)
-            print(f"    - {tienda}: {hoy} hoy vs {promedio:.0f} promedio")
-        print(f"  Revisar si el sitio cambio su HTML o esta caido.")
+        for linea in msg_alertas:
+            print(f"  {linea}")
         print(f"  {'!' * 50}")
 
-    return alertas
+        # Log
+        log_lineas.extend(msg_alertas)
+
+        # Email
+        asunto = f"[BabyAhorro] ALERTA: {len(alertas)} scraper(s) con datos bajos"
+        _enviar_email_monitoreo(asunto, log_lineas)
+
+    # Siempre escribir log
+    _escribir_log(log_lineas)
+
+    return [t for t, _, _ in alertas] if alertas else []
 
 
 # =============================================================
