@@ -22,6 +22,11 @@ from datetime import datetime
 
 import requests
 
+try:
+    from scrapers.http_utils import obtener_texto
+except ImportError:
+    from http_utils import obtener_texto
+
 # --- CONFIGURACION ---
 
 # URL del sitemap principal
@@ -225,15 +230,13 @@ def obtener_sitemaps():
     Descarga el sitemap principal y retorna las URLs de los sub-sitemaps.
     """
     print("  Descargando sitemap principal...")
-    try:
-        resp = requests.get(SITEMAP_URL, headers=HEADERS, timeout=TIMEOUT)
-        resp.raise_for_status()
-    except requests.exceptions.RequestException as e:
-        print(f"  ERROR descargando sitemap: {e}")
+    texto = obtener_texto(SITEMAP_URL, HEADERS, TIMEOUT)
+    if not texto:
+        print(f"  ERROR descargando sitemap")
         return []
 
     try:
-        root = ET.fromstring(resp.content)
+        root = ET.fromstring(texto)
     except ET.ParseError as e:
         print(f"  ERROR parseando XML del sitemap: {e}")
         return []
@@ -260,15 +263,12 @@ def obtener_urls_productos(sitemap_urls):
 
     for sitemap_url in sitemap_urls:
         print(f"  Descargando sub-sitemap: {sitemap_url.split('/')[-1]}...")
-        try:
-            resp = requests.get(sitemap_url, headers=HEADERS, timeout=TIMEOUT)
-            resp.raise_for_status()
-        except requests.exceptions.RequestException as e:
-            print(f"  ERROR: {e}")
+        texto = obtener_texto(sitemap_url, HEADERS, TIMEOUT)
+        if not texto:
             continue
 
         try:
-            root = ET.fromstring(resp.content)
+            root = ET.fromstring(texto)
         except ET.ParseError:
             continue
 
@@ -568,15 +568,12 @@ def main():
         slug = url.split("/products/")[-1] if "/products/" in url else url
         print(f"  [{idx}/{len(urls_productos)}] {slug[:60]}...")
 
-        try:
-            resp = requests.get(url, headers=HEADERS, timeout=TIMEOUT)
-            resp.raise_for_status()
-        except requests.exceptions.RequestException as e:
-            print(f"    ERROR: {e}")
+        html = obtener_texto(url, HEADERS, TIMEOUT)
+        if not html:
             errores += 1
             continue
 
-        data = extraer_product_data(resp.text)
+        data = extraer_product_data(html)
         if not data:
             print(f"    No se encontro product_traker_data")
             continue

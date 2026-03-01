@@ -17,6 +17,11 @@ from datetime import datetime
 
 import requests
 
+try:
+    from scrapers.http_utils import obtener_json
+except ImportError:
+    from http_utils import obtener_json
+
 # --- CONFIGURACION ---
 
 # Endpoint de la API OCAPI de Cruz Verde
@@ -116,23 +121,8 @@ def buscar_productos_api(query, count=PRODUCTOS_POR_PAGINA, start=0, refine=None
     if refine:
         params["refine"] = refine
 
-    try:
-        print(f"  API: q={query}, start={start}, count={count}" + (f", refine={refine}" if refine else ""))
-        respuesta = requests.get(API_URL, params=params, headers=HEADERS, timeout=TIMEOUT)
-        respuesta.raise_for_status()
-        return respuesta.json()
-    except requests.exceptions.Timeout:
-        print(f"  ERROR: Tiempo de espera agotado")
-        return None
-    except requests.exceptions.ConnectionError:
-        print(f"  ERROR: No se pudo conectar a la API")
-        return None
-    except requests.exceptions.HTTPError as e:
-        print(f"  ERROR: Respuesta HTTP {e.response.status_code}")
-        return None
-    except (requests.exceptions.RequestException, ValueError) as e:
-        print(f"  ERROR inesperado: {e}")
-        return None
+    print(f"  API: q={query}, start={start}, count={count}" + (f", refine={refine}" if refine else ""))
+    return obtener_json(API_URL, HEADERS, params=params, timeout=TIMEOUT)
 
 
 def extraer_marca(nombre_producto):

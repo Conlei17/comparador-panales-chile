@@ -15,8 +15,12 @@ import re
 import time
 from datetime import datetime
 
-import requests
 from bs4 import BeautifulSoup
+
+try:
+    from scrapers.http_utils import obtener_pagina
+except ImportError:
+    from http_utils import obtener_pagina
 
 # --- CONFIGURACION ---
 
@@ -50,31 +54,6 @@ TIMEOUT = 20
 PAUSA_ENTRE_PAGINAS = 3
 
 
-def obtener_pagina(url):
-    """
-    Descarga el HTML de una URL y lo convierte en un objeto BeautifulSoup.
-
-    Retorna:
-        BeautifulSoup o None si hubo un error.
-    """
-    try:
-        print(f"  Descargando: {url}")
-        respuesta = requests.get(url, headers=HEADERS, timeout=TIMEOUT)
-        respuesta.raise_for_status()
-        return BeautifulSoup(respuesta.text, "lxml")
-
-    except requests.exceptions.Timeout:
-        print(f"  ERROR: Tiempo de espera agotado para {url}")
-        return None
-    except requests.exceptions.ConnectionError:
-        print(f"  ERROR: No se pudo conectar a {url}")
-        return None
-    except requests.exceptions.HTTPError as e:
-        print(f"  ERROR: Respuesta HTTP {e.response.status_code} para {url}")
-        return None
-    except requests.exceptions.RequestException as e:
-        print(f"  ERROR inesperado: {e}")
-        return None
 
 
 def extraer_json_renderdata(soup):
@@ -544,7 +523,7 @@ def main():
 
         # Paso 1: Descargar la primera pagina
         print("  Descargando primera pagina...")
-        soup_primera = obtener_pagina(url_cat)
+        soup_primera = obtener_pagina(url_cat, HEADERS, TIMEOUT)
 
         if not soup_primera:
             print(f"  ERROR: No se pudo descargar {url_cat}. Saltando categoria.")
@@ -570,7 +549,7 @@ def main():
             for num_pagina in range(2, total_paginas + 1):
                 print(f"\n  --- Pagina {num_pagina} de {total_paginas} ---")
                 url_pagina = f"{url_cat}?page={num_pagina}"
-                soup = obtener_pagina(url_pagina)
+                soup = obtener_pagina(url_pagina, HEADERS, TIMEOUT)
                 if not soup:
                     continue
 

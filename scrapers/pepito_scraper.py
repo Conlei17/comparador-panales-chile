@@ -20,8 +20,12 @@ import re
 import time
 from datetime import datetime
 
-import requests
 from bs4 import BeautifulSoup
+
+try:
+    from scrapers.http_utils import obtener_pagina
+except ImportError:
+    from http_utils import obtener_pagina
 
 # --- CONFIGURACION ---
 
@@ -64,31 +68,6 @@ PAUSA_ENTRE_PAGINAS = 2
 PAUSA_ENTRE_PRODUCTOS = 0.5
 
 
-def obtener_pagina(url):
-    """
-    Descarga el HTML de una URL y lo convierte en un objeto BeautifulSoup.
-
-    Retorna:
-        BeautifulSoup o None si hubo un error.
-    """
-    try:
-        print(f"  Descargando: {url}")
-        respuesta = requests.get(url, headers=HEADERS, timeout=TIMEOUT)
-        respuesta.raise_for_status()
-        return BeautifulSoup(respuesta.text, "lxml")
-
-    except requests.exceptions.Timeout:
-        print(f"  ERROR: Tiempo de espera agotado para {url}")
-        return None
-    except requests.exceptions.ConnectionError:
-        print(f"  ERROR: No se pudo conectar a {url}")
-        return None
-    except requests.exceptions.HTTPError as e:
-        print(f"  ERROR: Respuesta HTTP {e.response.status_code} para {url}")
-        return None
-    except requests.exceptions.RequestException as e:
-        print(f"  ERROR inesperado: {e}")
-        return None
 
 
 def detectar_total_paginas(soup):
@@ -206,9 +185,9 @@ def extraer_cantidad_desde_detalle(url):
         return None
 
     try:
-        respuesta = requests.get(url, headers=HEADERS, timeout=TIMEOUT)
-        respuesta.raise_for_status()
-        soup = BeautifulSoup(respuesta.text, "lxml")
+        soup = obtener_pagina(url, HEADERS, TIMEOUT)
+        if not soup:
+            return None
 
         # Buscamos en el texto completo de la pagina
         texto = soup.get_text()
@@ -384,7 +363,7 @@ def scrapear_categoria(nombre_categoria, url_base):
     print(f"{'─' * 50}")
 
     # Descargar primera pagina
-    soup_primera = obtener_pagina(url_base)
+    soup_primera = obtener_pagina(url_base, HEADERS, TIMEOUT)
     if not soup_primera:
         print(f"  ERROR: No se pudo descargar {nombre_categoria}. Saltando...")
         return []
@@ -402,7 +381,7 @@ def scrapear_categoria(nombre_categoria, url_base):
             soup = soup_primera
         else:
             url_pagina = f"{url_base}?page={num_pagina}"
-            soup = obtener_pagina(url_pagina)
+            soup = obtener_pagina(url_pagina, HEADERS, TIMEOUT)
             if not soup:
                 print(f"  No se pudo descargar pagina {num_pagina}. Continuando...")
                 continue

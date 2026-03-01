@@ -17,6 +17,7 @@ import os
 import re
 import csv
 import sqlite3
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 
 # Palabras clave para detectar fórmulas infantiles
@@ -194,6 +195,17 @@ def obtener_o_crear_producto(cursor, nombre, marca, tamano_unidades, url, imagen
     return cursor.lastrowid
 
 
+# Rangos razonables para validacion de precios (CLP)
+PRECIO_MIN = 500
+PRECIO_MAX = 200000
+PPU_MIN = 50
+PPU_MAX = 2000
+
+# Rangos para formulas infantiles (precio por kg)
+PPU_FORMULA_MIN = 5000
+PPU_FORMULA_MAX = 80000
+
+
 def guardar_en_db(conn, productos, fecha_scraping):
     """
     Guarda todos los productos en la base de datos SQLite.
@@ -201,7 +213,8 @@ def guardar_en_db(conn, productos, fecha_scraping):
     Para cada producto:
     1. Busca o crea la tienda
     2. Busca o crea el producto
-    3. Inserta un nuevo registro de precio con la fecha actual
+    3. Valida que el precio este en un rango razonable
+    4. Inserta un nuevo registro de precio con la fecha actual
 
     Esto permite tener multiples registros del mismo producto
     en distintas fechas, creando un historico de precios.
@@ -248,6 +261,21 @@ def guardar_en_db(conn, productos, fecha_scraping):
                 precio_por_unidad = round(precio / cantidad)
         else:
             precio_por_unidad = p.get("precio_por_unidad")
+
+        # Validacion de precios: descartar valores fuera de rango
+        if precio and (precio < PRECIO_MIN or precio > PRECIO_MAX):
+            print(f"  WARN: precio ${precio} fuera de rango, descartando: {nombre}")
+            continue
+
+        if precio_por_unidad:
+            if es_formula(nombre):
+                if precio_por_unidad < PPU_FORMULA_MIN or precio_por_unidad > PPU_FORMULA_MAX:
+                    print(f"  WARN: PPU ${precio_por_unidad}/kg fuera de rango: {nombre}")
+                    continue
+            else:
+                if precio_por_unidad < PPU_MIN or precio_por_unidad > PPU_MAX:
+                    print(f"  WARN: PPU ${precio_por_unidad}/u fuera de rango: {nombre}")
+                    continue
 
         # Precio lista (para indicador de descuento)
         precio_lista = p.get("precio_lista")
@@ -632,17 +660,34 @@ def main():
     print(f"  Inicio: {fecha_scraping}")
     print()
 
-    # --- PASO 1: Ejecutar scrapers ---
+    # --- PASO 1: Ejecutar scrapers (en paralelo) ---
+    scrapers = {
+        "liquimax": ejecutar_scraper_liquimax,
+        "pepito": ejecutar_scraper_pepito,
+        "lapanalera": ejecutar_scraper_lapanalera,
+        "tintin": ejecutar_scraper_tintin,
+        "santaisabel": ejecutar_scraper_santaisabel,
+        "jumbo": ejecutar_scraper_jumbo,
+        "ahumada": ejecutar_scraper_ahumada,
+        "cruzverde": ejecutar_scraper_cruzverde,
+        "salcobrand": ejecutar_scraper_salcobrand,
+    }
+
     resultados = {}
-    resultados["liquimax"] = ejecutar_scraper_liquimax()
-    resultados["pepito"] = ejecutar_scraper_pepito()
-    resultados["lapanalera"] = ejecutar_scraper_lapanalera()
-    resultados["tintin"] = ejecutar_scraper_tintin()
-    resultados["santaisabel"] = ejecutar_scraper_santaisabel()
-    resultados["jumbo"] = ejecutar_scraper_jumbo()
-    resultados["ahumada"] = ejecutar_scraper_ahumada()
-    resultados["cruzverde"] = ejecutar_scraper_cruzverde()
-    resultados["salcobrand"] = ejecutar_scraper_salcobrand()
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        futures = {pool.submit(fn): nombre for nombre, fn in scrapers.items()}
+        for future in as_completed(futures):
+            nombre = futures[future]
+            try:
+                resultados[nombre] = future.result()
+            except Exception as e:
+                print(f"ERROR en scraper {nombre}: {e}")
+                resultados[nombre] = False
+
+    print("\n  Resumen scrapers:")
+    for nombre, exito in sorted(resultados.items()):
+        estado = "OK" if exito else "FALLO"
+        print(f"    {nombre}: {estado}")
 
     if not any(resultados.values()):
         print("\nERROR: Ningun scraper se ejecuto correctamente. Abortando.")
