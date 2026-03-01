@@ -118,7 +118,8 @@ def _refresh_loop():
             print("[Refresh] Re-descargando precios.db...")
             descargar_precios_db()
             print("[Refresh] Verificando alertas...")
-            verificar_alertas(ARCHIVO_DB, ARCHIVO_ALERTAS_DB)
+            verificar_alertas(ARCHIVO_DB, ARCHIVO_ALERTAS_DB,
+                             callback_post_envio=subir_alertas_db)
             subir_alertas_db()
         except Exception as e:
             print(f"[Refresh] Error: {e}")

@@ -130,13 +130,30 @@ def validar_email(email):
 def crear_alerta(db_path, email, tipo, precio_objetivo, nombre_display,
                  producto_id=None, marca=None, talla=None, cantidad=None,
                  categoria=None):
-    """Crea una alerta pendiente de confirmacion. Retorna el token."""
+    """Crea una alerta pendiente de confirmacion. Retorna el token.
+    Si ya existe una alerta activa identica, la reutiliza."""
     db = db_path or ARCHIVO_ALERTAS_DB
-    token = str(uuid.uuid4())
     ahora = datetime.now().isoformat()
 
     conn = sqlite3.connect(db)
+    conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
+
+    # Verificar si ya existe una alerta activa identica
+    cursor.execute("""
+        SELECT token FROM alertas
+        WHERE email = ? AND activa = 1
+          AND COALESCE(marca, '') = COALESCE(?, '')
+          AND COALESCE(talla, '') = COALESCE(?, '')
+          AND COALESCE(cantidad, 0) = COALESCE(?, 0)
+          AND COALESCE(producto_id, 0) = COALESCE(?, 0)
+    """, (email, marca, talla, cantidad, producto_id))
+    existente = cursor.fetchone()
+    if existente:
+        conn.close()
+        return existente["token"]
+
+    token = str(uuid.uuid4())
     cursor.execute("""
         INSERT INTO alertas (email, tipo, producto_id, marca, talla, cantidad,
                             categoria, nombre_display, precio_objetivo, token,
@@ -295,12 +312,14 @@ def enviar_email_alerta(alerta, precio_actual, tienda, nombre_producto,
         return False
 
 
-def verificar_alertas(precios_db_path, alertas_db_path=None):
+def verificar_alertas(precios_db_path, alertas_db_path=None, callback_post_envio=None):
     """
     Verifica alertas activas y confirmadas contra precios actuales.
     Envia emails cuando el precio baja del objetivo.
 
     Lee precios de precios_db_path y lee/escribe alertas en alertas_db_path.
+    callback_post_envio: funcion opcional que se llama despues de enviar emails
+                         para persistir alertas.db (ej: subir a GitHub).
     """
     alertas_db = alertas_db_path or ARCHIVO_ALERTAS_DB
     inicializar_alertas(alertas_db)
@@ -450,4 +469,12 @@ def verificar_alertas(precios_db_path, alertas_db_path=None):
 
     conn_precios.close()
     conn_alertas.close()
+
+    # Persistir alertas.db inmediatamente si se enviaron emails
+    if total_enviadas > 0 and callback_post_envio:
+        try:
+            callback_post_envio()
+        except Exception as e:
+            print(f"    [Alertas] Error en callback post-envio: {e}")
+
     print(f"    [Alertas] {total_verificadas} alertas verificadas, {total_enviadas} emails enviados")
