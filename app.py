@@ -356,10 +356,24 @@ def detectar_linea_panal(nombre):
     if not nombre:
         return None
     nombre_lower = nombre.lower()
+
+    # Detectar linea base
+    linea_detectada = None
     for linea in LINEAS_PANALES:
         if linea in nombre_lower:
-            return linea.title()
-    return None
+            linea_detectada = linea
+            break
+
+    if not linea_detectada:
+        return None
+
+    # Si la linea no contiene "pants" pero el nombre si,
+    # es la version pants de esa linea (ej: "Premium Care Pants")
+    es_pants = "pants" in nombre_lower
+    if es_pants and "pants" not in linea_detectada:
+        return f"Pants {linea_detectada.title()}"
+
+    return linea_detectada.title()
 
 
 # Marcas conocidas de fórmulas (para remover del nombre al extraer variante)
