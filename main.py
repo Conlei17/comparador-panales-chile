@@ -206,7 +206,7 @@ def obtener_o_crear_producto(cursor, nombre, marca, tamano_unidades, url, imagen
 # Rangos razonables para validacion de precios (CLP)
 PRECIO_MIN = 500
 PRECIO_MAX = 200000
-PPU_MIN = 50
+PPU_MIN = 10
 PPU_MAX = 2000
 
 # Rangos para formulas infantiles (precio por kg)
