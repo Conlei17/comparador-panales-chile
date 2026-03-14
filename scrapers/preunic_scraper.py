@@ -74,6 +74,7 @@ MARCAS_CONOCIDAS = [
     "Nenitos", "Simmons", "Coombs",
     "Johnsons", "Johnson",
     "WaterWipes", "Waterwipes",
+    "Emuwipes", "Toddler", "Simonds",
 ]
 
 FORMULAS_KEYWORDS = [
@@ -100,7 +101,8 @@ def extraer_marca(nombre_producto, marca_api=None):
         for marca in MARCAS_CONOCIDAS:
             if marca.lower() == marca_api.lower():
                 return marca
-        return marca_api.title()
+        # title() capitaliza despues de apostrofes; preservar original
+        return marca_api
 
     nombre_lower = nombre_producto.lower()
     for marca in MARCAS_CONOCIDAS:
@@ -127,10 +129,10 @@ def extraer_cantidad(nombre_producto):
     patrones = [
         r"(\d+)\s*(?:pa[ñn]ales)\b",
         r"(\d+)\s*(?:toallitas|toallas)\b",
-        r"(\d+)\s*(?:unidades|unid|und)\b",
+        r"(\d+)\s*(?:unidades|unid|und|uds)\b",
         r"(\d+)\s*(?:hojas)\b",
         r"x\s*(\d+)\s*(?:un|u)\b",
-        r"[xX](\d+)\b",
+        r"[xX]\s*(\d+)\b",
         r"(\d+)\s*[uU]n\b",
         r"(\d+)\s*[uU]\b",
     ]
