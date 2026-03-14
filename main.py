@@ -380,6 +380,7 @@ _SCRAPER_A_TIENDA = {
     "ahumada": "Farmacias Ahumada",
     "cruzverde": "Cruz Verde",
     "salcobrand": "Salcobrand",
+    "preunic": "Preunic",
 }
 
 
@@ -637,6 +638,26 @@ def ejecutar_scraper_cruzverde():
         return False
 
 
+def ejecutar_scraper_preunic():
+    """
+    Ejecuta el scraper de Preunic.
+    Retorna True si se ejecuto correctamente.
+    """
+    print("\n")
+    print("=" * 60)
+    print("EJECUTANDO SCRAPER: Preunic")
+    print("=" * 60)
+
+    try:
+        from scrapers import preunic_scraper
+        preunic_scraper.main()
+        return True
+    except Exception as e:
+        print(f"ERROR ejecutando scraper de Preunic: {e}")
+        print("Continuando con los demas scrapers...\n")
+        return False
+
+
 def ejecutar_scraper_salcobrand():
     """
     Ejecuta el scraper de Salcobrand.
@@ -843,6 +864,7 @@ def main():
         "ahumada": ejecutar_scraper_ahumada,
         "cruzverde": ejecutar_scraper_cruzverde,
         "salcobrand": ejecutar_scraper_salcobrand,
+        "preunic": ejecutar_scraper_preunic,
     }
 
     resultados = {}
@@ -883,6 +905,7 @@ def main():
         "Farmacias Ahumada": os.path.join(CARPETA_DATOS, "ahumada_precios.csv"),
         "Cruz Verde": os.path.join(CARPETA_DATOS, "cruzverde_precios.csv"),
         "Salcobrand": os.path.join(CARPETA_DATOS, "salcobrand_precios.csv"),
+        "Preunic": os.path.join(CARPETA_DATOS, "preunic_precios.csv"),
     }
 
     for tienda, ruta in archivos_csv.items():
