@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>P&aacute;gina no encontrada - BabyAhorro</title>
+  <meta name="robots" content="noindex">
+  <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon-32x32.png') }}">
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+  <meta name="theme-color" content="#f4b8a8">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script>
+    if (localStorage.getItem('darkMode') === 'true') {
+      document.documentElement.style.visibility = 'hidden';
+    }
+  </script>
+</head>
+<body>
+
+  <script>
+    if (localStorage.getItem('darkMode') === 'true') {
+      document.body.classList.add('dark');
+      document.documentElement.style.visibility = '';
+    }
+  </script>
+
+  <!-- Header -->
+  <header class="header">
+    <button class="dark-toggle" onclick="toggleDark()" title="Cambiar tema" id="darkToggle">&#9790;</button>
+    <a href="/"><img src="{{ url_for('static', filename='logo.png') }}" alt="BabyAhorro" class="header-logo"></a>
+    <p class="header-tagline">Ahorro real para familias reales</p>
+    <nav class="nav">
+      <a href="/" class="nav-link">Comparar precios</a>
+      <a href="/historico" class="nav-link">Hist&oacute;rico</a>
+    </nav>
+  </header>
+
+  <div class="container">
+    <div class="empty">
+      <div class="empty-icon">&#x1F50D;</div>
+      <h1>P&aacute;gina no encontrada</h1>
+      <p>La p&aacute;gina que buscas no existe o fue movida.</p>
+      <p><a href="/" class="btn-buscar" style="display:inline-block; text-decoration:none;">Volver al comparador</a></p>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    BabyAhorro &middot; Datos actualizados diariamente
+    <br>Hecho con &hearts; por una mam&aacute; primeriza
+  </footer>
+
+  <script>
+    function toggleDark() {
+      document.body.classList.toggle('dark');
+      var isDark = document.body.classList.contains('dark');
+      localStorage.setItem('darkMode', isDark);
+      document.getElementById('darkToggle').innerHTML = isDark ? '&#9788;' : '&#9790;';
+    }
+    (function() {
+      var isDark = document.body.classList.contains('dark');
+      document.getElementById('darkToggle').innerHTML = isDark ? '&#9788;' : '&#9790;';
+    })();
+  </script>
+
+</body>
+</html>

@@ -1631,6 +1631,11 @@ def historico():
     )
 
 
+@app.errorhandler(404)
+def pagina_no_encontrada(e):
+    return render_template("404.html"), 404
+
+
 @app.route("/robots.txt")
 def robots_txt():
     """Genera robots.txt para SEO."""

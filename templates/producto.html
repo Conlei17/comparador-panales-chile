@@ -79,6 +79,39 @@
     }
   }
   </script>
+
+  <!-- Schema.org BreadcrumbList -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {
+        "@type": "ListItem",
+        "position": 1,
+        "name": "Inicio",
+        "item": "{{ request.url_root|e }}"
+      },
+      {
+        "@type": "ListItem",
+        "position": 2,
+        "name": "{{ categoria|e }}",
+        "item": "{{ request.url_root|e }}{{ cat_slug }}/"
+      },
+      {
+        "@type": "ListItem",
+        "position": 3,
+        "name": "{{ marca|e }}",
+        "item": "{{ request.url_root|e }}{{ cat_slug }}/{{ marca_slug }}/"
+      },
+      {
+        "@type": "ListItem",
+        "position": 4,
+        "name": "{{ grupo.nombre|e }}"
+      }
+    ]
+  }
+  </script>
 </head>
 <body>
 
@@ -216,7 +249,7 @@
             <td class="col-ppu">{{ o.precio_por_unidad|precio }}</td>
             <td>
               {% if o.url %}
-                <a href="{{ o.url|utm('producto') }}" target="_blank" rel="noopener" class="link-tienda"
+                <a href="{{ o.url|utm('producto') }}" target="_blank" rel="noopener nofollow" class="link-tienda"
                    onclick="gtag('event','click_producto_tienda',{tienda:'{{ o.tienda }}',producto:'{{ o.nombre|e }}',precio:{{ o.precio or 0 }}})">
                   Ver en tienda &rarr;
                 </a>
@@ -270,7 +303,7 @@
             {{ o.tienda }}
           </span>
           {% if o.url %}
-            <a href="{{ o.url|utm('producto') }}" target="_blank" rel="noopener" class="link-tienda">
+            <a href="{{ o.url|utm('producto') }}" target="_blank" rel="noopener nofollow" class="link-tienda">
               Ver en tienda &rarr;
             </a>
           {% endif %}

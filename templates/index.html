@@ -399,7 +399,7 @@
               <td class="col-ppu">{{ p.precio_por_unidad|precio }}</td>
               <td>
                 {% if p.url %}
-                  <a href="{{ p.url|utm }}" target="_blank" rel="noopener" class="link-tienda"
+                  <a href="{{ p.url|utm }}" target="_blank" rel="noopener nofollow" class="link-tienda"
                      onclick="gtag('event','click_producto_tienda',{tienda:'{{ p.tienda }}',producto:'{{ p.nombre|e }}',precio:{{ p.precio or 0 }}})">
                     Ver en tienda &rarr;
                   </a>
@@ -480,7 +480,7 @@
                 &#128276;
               </button>
               {% if p.url %}
-                <a href="{{ p.url|utm }}" target="_blank" rel="noopener" class="link-tienda">
+                <a href="{{ p.url|utm }}" target="_blank" rel="noopener nofollow" class="link-tienda">
                   Ver en tienda &rarr;
                 </a>
               {% endif %}
@@ -494,7 +494,7 @@
       <!-- Sin resultados -->
       <div class="empty">
         <div class="empty-icon">&#x1F50D;</div>
-        <h3>No se encontraron panales</h3>
+        <h2>No se encontraron panales</h2>
         <p>Prueba con otros filtros o una busqueda diferente.</p>
       </div>
 
@@ -502,7 +502,7 @@
       <!-- Estado inicial con contenido SEO -->
       <div class="empty">
         <div class="empty-icon">&#x1F476;</div>
-        <h3>Selecciona una marca, talla o categor&iacute;a</h3>
+        <h2>Selecciona una marca, talla o categor&iacute;a</h2>
         <p>BabyAhorro compara precios de pa&ntilde;ales, toallitas h&uacute;medas y f&oacute;rmulas infantiles
            en 9 tiendas: Jumbo, Cruz Verde, Salcobrand, Farmacias Ahumada, Liquimax,
            Distribuidora Pepito, La Pa&ntilde;alera, Pa&ntilde;ales Tin Tin y Santa Isabel.</p>
@@ -723,7 +723,7 @@
         var minPPU = Math.min.apply(null, seleccionados.map(function(p) { return p.ppu || Infinity; }));
 
         var html = '<div class="comparar-contenido">';
-        html += '<div class="comparar-header"><h3>Comparador de productos</h3><button class="comparar-cerrar" onclick="cerrarComparador()">Cerrar</button></div>';
+        html += '<div class="comparar-header"><h2>Comparador de productos</h2><button class="comparar-cerrar" onclick="cerrarComparador()">Cerrar</button></div>';
 
         // Desktop table
         html += '<div class="comparar-tabla-wrapper"><table class="comparar-tabla"><thead><tr><th>Atributo</th>';
@@ -733,7 +733,7 @@
         // Imagen
         html += '<tr><td>Imagen</td>';
         seleccionados.forEach(function(p) {
-          html += '<td>' + (p.imagen ? '<img src="' + p.imagen + '" class="comparar-img">' : '-') + '</td>';
+          html += '<td>' + (p.imagen ? '<img src="' + p.imagen + '" alt="' + p.nombre + '" class="comparar-img">' : '-') + '</td>';
         });
         html += '</tr>';
 
@@ -789,7 +789,7 @@
         seleccionados.forEach(function(p) {
           var esMejor = p.ppu && p.ppu === minPPU;
           html += '<div class="comparar-card-movil' + (esMejor ? ' comparar-card-mejor' : '') + '">';
-          if (p.imagen) html += '<img src="' + p.imagen + '" class="comparar-img">';
+          if (p.imagen) html += '<img src="' + p.imagen + '" alt="' + p.nombre + '" class="comparar-img">';
           html += '<div class="comparar-card-nombre">' + p.nombre + '</div>';
           html += '<div class="comparar-card-detalle"><span>Tienda:</span> ' + p.tienda + '</div>';
           html += '<div class="comparar-card-detalle"><span>Precio:</span> ' + formatPrecio(p.precio) + '</div>';
@@ -990,7 +990,7 @@
         productoAlerta = datos;
         var ppuDefault = (datos.ppu || datos.precio || 0) + 1;
         modalAlerta.innerHTML = '<div class="alerta-modal-contenido">' +
-          '<div class="comparar-header"><h3>Crear alerta de precio unitario</h3><button class="comparar-cerrar" onclick="cerrarModalAlerta()">Cerrar</button></div>' +
+          '<div class="comparar-header"><h2>Crear alerta de precio unitario</h2><button class="comparar-cerrar" onclick="cerrarModalAlerta()">Cerrar</button></div>' +
           '<p class="alerta-desc">' + datos.nombre + '</p>' +
           '<div class="alerta-inputs">' +
             '<div class="filtro-grupo"><label>Email</label><input type="email" id="modal-alerta-email" placeholder="tu@email.com" class="alerta-input"></div>' +
