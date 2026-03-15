@@ -19,6 +19,7 @@ import hashlib
 import os
 import re
 import time
+from collections import defaultdict
 from datetime import datetime
 from urllib.parse import unquote, quote
 
@@ -58,7 +59,9 @@ HEADERS = {
 TIMEOUT = 20
 
 # Pausa entre peticiones para no sobrecargar el servidor (en segundos)
-PAUSA_ENTRE_PAGINAS = 2
+# MercadoLibre es agresivo con rate limiting — pausas cortas causan
+# redirect a account-verification (CAPTCHA). 4s es un buen balance.
+PAUSA_ENTRE_PAGINAS = 4
 
 # Maximo de productos por query (para evitar ruido en paginas lejanas)
 MAX_PRODUCTOS_POR_QUERY = 500
@@ -152,10 +155,22 @@ def obtener_pagina_ml(session, url):
     Si recibe un challenge page, lo resuelve y reintenta.
 
     Retorna BeautifulSoup o None.
+    Retorna "RATE_LIMITED" (string) si MercadoLibre bloqueo nuestra IP.
     """
     for intento in range(3):
         try:
-            resp = session.get(url, headers=HEADERS, timeout=TIMEOUT)
+            resp = session.get(url, headers=HEADERS, timeout=TIMEOUT,
+                               allow_redirects=False)
+
+            # Detectar rate limit: redirect a account-verification (CAPTCHA)
+            if resp.status_code in (301, 302, 303, 307, 308):
+                location = resp.headers.get("Location", "")
+                if "account-verification" in location:
+                    print("  BLOQUEADO: MercadoLibre requiere CAPTCHA (rate limit).")
+                    print("  Espera unas horas antes de volver a ejecutar.")
+                    return "RATE_LIMITED"
+                # Seguir otros redirects normalmente
+                resp = session.get(url, headers=HEADERS, timeout=TIMEOUT)
 
             # Detectar challenge page: HTML corto con spinner y verifyChallenge()
             if resp.status_code == 200 and "verifyChallenge" in resp.text:
@@ -178,6 +193,11 @@ def obtener_pagina_ml(session, url):
                     time.sleep(espera)
                     continue
                 return None
+
+            # Verificar que el HTML tiene contenido real (no una pagina vacia)
+            if "account-verification" in resp.url:
+                print("  BLOQUEADO: Redirigido a account-verification.")
+                return "RATE_LIMITED"
 
             return BeautifulSoup(resp.text, "lxml")
 
@@ -248,7 +268,9 @@ def extraer_productos(soup):
                 continue
 
             # --- URL ---
-            link_elem = contenedor.select_one('a[href*="mercadolibre.cl/"]')
+            # Preferir links directos (www.mercadolibre.cl) sobre tracking (click1.)
+            link_directo = contenedor.select_one('a[href*="www.mercadolibre.cl/"]')
+            link_elem = link_directo or contenedor.select_one('a[href*="mercadolibre.cl/"]')
             if not link_elem:
                 link_elem = contenedor.select_one("a[href]")
             url = link_elem.get("href", "") if link_elem else ""
@@ -297,6 +319,15 @@ def extraer_productos(soup):
             # --- PRECIO POR UNIDAD ---
             precio_por_unidad = calcular_precio_por_unidad(precio, cantidad, nombre)
 
+            # URLs de tracking (click1.mercadolibre) no sirven como ID
+            # unico en la DB. Generar URL sintetica unica.
+            if "click1.mercadolibre" in url or url.endswith("/count"):
+                unique = hashlib.md5(
+                    f"{nombre}|{precio}|{imagen}".encode()
+                ).hexdigest()[:8]
+                slug = re.sub(r"[^a-z0-9]+", "-", nombre.lower()).strip("-")[:70]
+                url = f"https://www.mercadolibre.cl/p/{slug}-{unique}"
+
             producto = {
                 "nombre": nombre,
                 "precio": precio,
@@ -319,14 +350,40 @@ def extraer_productos(soup):
     return productos
 
 
+def seleccionar_mejor_precio(productos):
+    """
+    Dado que MercadoLibre tiene muchos sellers vendiendo el mismo producto,
+    agrupa por nombre normalizado y se queda con el de menor precio.
+
+    Esto maximiza la captura (se scrapea todo) y muestra siempre el mejor
+    precio disponible para cada producto unico.
+    """
+    por_nombre = defaultdict(list)
+    for p in productos:
+        clave = p["nombre"].strip().lower()
+        por_nombre[clave].append(p)
+
+    mejores = []
+    for nombre, variantes in por_nombre.items():
+        con_precio = [v for v in variantes if v["precio"] is not None]
+        if con_precio:
+            mejor = min(con_precio, key=lambda x: x["precio"])
+        else:
+            mejor = variantes[0]
+        mejores.append(mejor)
+
+    return mejores
+
+
 def main():
     """
     Funcion principal que ejecuta el scraping de MercadoLibre Chile.
 
     1. Para cada query de busqueda, obtiene la primera pagina
     2. Pagina con _Desde_49, _Desde_97, etc. hasta agotar resultados
-    3. Deduplica por MLC ID
-    4. Guarda en CSV
+    3. Deduplica por MLC ID (mismo listing en distintas paginas)
+    4. Selecciona el mejor precio por producto unico (multiples sellers)
+    5. Guarda en CSV
     """
     print("=" * 60)
     print("SCRAPER MERCADOLIBRE - Comparador de Panales Chile")
@@ -337,7 +394,7 @@ def main():
 
     session = requests.Session()
     todos_los_productos = []
-    ids_vistos = set()  # MLC IDs o nombres normalizados para dedup
+    ids_vistos = set()  # MLC IDs para dedup de listings repetidos entre paginas
 
     for idx_query, query in enumerate(QUERIES, 1):
         print(f"\n[Query {idx_query}/{len(QUERIES)}] {query}")
@@ -357,6 +414,11 @@ def main():
             print(f"\n  Pagina {pagina} (offset {offset})...")
             soup = obtener_pagina_ml(session, url)
 
+            if soup == "RATE_LIMITED":
+                print("  Abortando todo el scraping por rate limit.")
+                pagina = -1  # Señal para salir del loop de queries
+                break
+
             if not soup:
                 print("  No se pudo obtener la pagina. Terminando query.")
                 break
@@ -374,19 +436,22 @@ def main():
                 print("  Sin productos en esta pagina. Terminando query.")
                 break
 
-            # Deduplicar por MLC ID o por nombre del producto
+            # Dedup solo por MLC ID: evita contar el mismo listing
+            # que aparece en multiples paginas de paginacion.
+            # NO deduplicamos por nombre aqui — eso lo hace
+            # seleccionar_mejor_precio() al final.
             nuevos = 0
             for producto in productos_pagina:
                 mlc_id = extraer_mlc_id(producto["url"])
-                dedup_key = mlc_id or producto["nombre"].strip().lower()
-                if dedup_key in ids_vistos:
+                if mlc_id and mlc_id in ids_vistos:
                     continue
-                ids_vistos.add(dedup_key)
+                if mlc_id:
+                    ids_vistos.add(mlc_id)
                 todos_los_productos.append(producto)
                 nuevos += 1
 
             productos_query += nuevos
-            print(f"  Nuevos (sin duplicados): {nuevos}")
+            print(f"  Nuevos (sin duplicados de listing): {nuevos}")
 
             # Verificar limites
             if productos_query >= MAX_PRODUCTOS_POR_QUERY:
@@ -401,32 +466,41 @@ def main():
 
         print(f"\n  Productos acumulados para '{query}': {productos_query}")
 
+        # Si fue rate limited, salir de todas las queries
+        if pagina == -1:
+            break
+
         # Pausa entre queries
         if idx_query < len(QUERIES):
             time.sleep(PAUSA_ENTRE_PAGINAS)
 
-    print(f"\n  Total productos (deduplicados): {len(todos_los_productos)}")
+    print(f"\n  Total productos capturados: {len(todos_los_productos)}")
+
+    # Seleccionar mejor precio por producto unico
+    productos_finales = seleccionar_mejor_precio(todos_los_productos)
+    print(f"  Productos unicos (mejor precio por nombre): {len(productos_finales)}")
 
     # Guardar en CSV
     print("\n[Guardando] Datos en CSV...")
     ruta_csv = os.path.join(CARPETA_DATOS, ARCHIVO_SALIDA)
-    guardar_csv(todos_los_productos, ruta_csv)
+    guardar_csv(productos_finales, ruta_csv)
 
     # Resumen final
     print()
     print("=" * 60)
     print("RESUMEN")
     print("=" * 60)
-    print(f"Productos totales: {len(todos_los_productos)}")
+    print(f"Productos capturados: {len(todos_los_productos)}")
+    print(f"Productos unicos (mejor precio): {len(productos_finales)}")
 
-    con_precio = sum(1 for p in todos_los_productos if p["precio"] is not None)
+    con_precio = sum(1 for p in productos_finales if p["precio"] is not None)
     print(f"Con precio: {con_precio}")
-    print(f"Sin precio: {len(todos_los_productos) - con_precio}")
+    print(f"Sin precio: {len(productos_finales) - con_precio}")
 
-    con_cantidad = sum(1 for p in todos_los_productos if p["cantidad_unidades"] is not None)
+    con_cantidad = sum(1 for p in productos_finales if p["cantidad_unidades"] is not None)
     print(f"Con cantidad: {con_cantidad}")
 
-    marcas = set(p["marca"] for p in todos_los_productos if p["marca"])
+    marcas = set(p["marca"] for p in productos_finales if p["marca"])
     print(f"Marcas encontradas: {', '.join(sorted(marcas))}")
 
     print(f"\nFin: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
