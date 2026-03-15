@@ -17,6 +17,7 @@ Estrategia:
 
 import hashlib
 import os
+import random
 import re
 import time
 from collections import defaultdict
@@ -44,24 +45,44 @@ CARPETA_DATOS = os.path.join(os.path.dirname(__file__), "..", "data")
 # Nombre del archivo de salida
 ARCHIVO_SALIDA = "mercadolibre_precios.csv"
 
-# Headers HTTP
-HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/120.0.0.0 Safari/537.36"
-    ),
+# Pool de User-Agents reales para rotar entre requests.
+# Usar siempre el mismo UA facilita el fingerprinting y bloqueo.
+_USER_AGENTS = [
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.2 Safari/605.1.15",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:133.0) Gecko/20100101 Firefox/133.0",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:133.0) Gecko/20100101 Firefox/133.0",
+]
+
+# Headers HTTP base (User-Agent se rota por request)
+HEADERS_BASE = {
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
     "Accept-Language": "es-CL,es;q=0.9",
 }
 
+
+def _headers():
+    """Retorna headers con un User-Agent aleatorio."""
+    h = HEADERS_BASE.copy()
+    h["User-Agent"] = random.choice(_USER_AGENTS)
+    return h
+
 # Tiempo maximo de espera por cada peticion (en segundos)
 TIMEOUT = 20
 
-# Pausa entre peticiones para no sobrecargar el servidor (en segundos)
-# MercadoLibre es agresivo con rate limiting — pausas cortas causan
-# redirect a account-verification (CAPTCHA). 4s es un buen balance.
-PAUSA_ENTRE_PAGINAS = 4
+# Rango de pausa aleatoria entre peticiones (en segundos).
+# Un delay fijo es facil de detectar como bot. Usar un rango aleatorio
+# simula mejor el comportamiento humano.
+PAUSA_MIN = 3
+PAUSA_MAX = 7
+
+# Maximo de paginas por query. Limitar la profundidad de paginacion
+# reduce drasticamente la cantidad de requests y el riesgo de bloqueo.
+# 6 paginas * ~48 productos = ~288 productos por query, suficiente
+# para capturar la gran mayoria de productos relevantes.
+MAX_PAGINAS_POR_QUERY = 6
 
 # Maximo de productos por query (para evitar ruido en paginas lejanas)
 MAX_PRODUCTOS_POR_QUERY = 500
@@ -159,7 +180,7 @@ def obtener_pagina_ml(session, url):
     """
     for intento in range(3):
         try:
-            resp = session.get(url, headers=HEADERS, timeout=TIMEOUT,
+            resp = session.get(url, headers=_headers(), timeout=TIMEOUT,
                                allow_redirects=False)
 
             # Detectar rate limit: redirect a account-verification (CAPTCHA)
@@ -170,7 +191,7 @@ def obtener_pagina_ml(session, url):
                     print("  Espera unas horas antes de volver a ejecutar.")
                     return "RATE_LIMITED"
                 # Seguir otros redirects normalmente
-                resp = session.get(url, headers=HEADERS, timeout=TIMEOUT)
+                resp = session.get(url, headers=_headers(), timeout=TIMEOUT)
 
             # Detectar challenge page: HTML corto con spinner y verifyChallenge()
             if resp.status_code == 200 and "verifyChallenge" in resp.text:
@@ -178,7 +199,7 @@ def obtener_pagina_ml(session, url):
                 resuelto = resolver_challenge(session)
                 if resuelto:
                     time.sleep(0.3)
-                    resp = session.get(url, headers=HEADERS, timeout=TIMEOUT)
+                    resp = session.get(url, headers=_headers(), timeout=TIMEOUT)
                     # Si sigue siendo challenge, reintentar
                     if "verifyChallenge" in resp.text:
                         print("  Challenge persiste despues de resolver, reintentando...")
@@ -458,11 +479,17 @@ def main():
                 print(f"  Limite de {MAX_PRODUCTOS_POR_QUERY} productos alcanzado.")
                 break
 
-            # Siguiente pagina
+            # Verificar limite de paginas
+            if pagina >= MAX_PAGINAS_POR_QUERY:
+                print(f"  Limite de {MAX_PAGINAS_POR_QUERY} paginas alcanzado.")
+                break
+
+            # Siguiente pagina con pausa aleatoria
             offset += INCREMENTO_PAGINACION
             pagina += 1
 
-            time.sleep(PAUSA_ENTRE_PAGINAS)
+            pausa = random.uniform(PAUSA_MIN, PAUSA_MAX)
+            time.sleep(pausa)
 
         print(f"\n  Productos acumulados para '{query}': {productos_query}")
 
@@ -470,9 +497,10 @@ def main():
         if pagina == -1:
             break
 
-        # Pausa entre queries
+        # Pausa aleatoria entre queries
         if idx_query < len(QUERIES):
-            time.sleep(PAUSA_ENTRE_PAGINAS)
+            pausa = random.uniform(PAUSA_MIN + 2, PAUSA_MAX + 3)
+            time.sleep(pausa)
 
     print(f"\n  Total productos capturados: {len(todos_los_productos)}")
 
