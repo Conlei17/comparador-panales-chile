@@ -161,9 +161,8 @@ def extraer_productos(soup):
 
     for bloque in bloques:
         try:
-            # Excluir productos agotados
-            if esta_agotado(bloque):
-                continue
+            # Detectar si esta agotado
+            agotado = esta_agotado(bloque)
 
             # --- NOMBRE DEL PRODUCTO ---
             nombre_elem = bloque.select_one("h3 a")
@@ -231,6 +230,7 @@ def extraer_productos(soup):
                 "url": url,
                 "tienda": "La Pañalera",
                 "fecha_extraccion": timestamp,
+                "en_stock": 0 if agotado else 1,
             }
             productos.append(producto)
 
@@ -252,7 +252,7 @@ def guardar_csv(productos, ruta_archivo):
     columnas = [
         "nombre", "precio", "marca", "cantidad_unidades",
         "precio_por_unidad", "imagen", "precio_lista",
-        "url", "tienda", "fecha_extraccion",
+        "url", "tienda", "fecha_extraccion", "en_stock",
     ]
 
     with open(ruta_archivo, "w", newline="", encoding="utf-8") as archivo:

@@ -60,6 +60,7 @@ COLUMNAS = [
     "fecha_extraccion",
     "imagen",
     "precio_lista",
+    "en_stock",
 ]
 COLUMNAS_CONSOLIDADO = COLUMNAS + ["nombre_normalizado", "es_precio_mas_bajo"]
 
@@ -146,6 +147,12 @@ def inicializar_db():
         conn.commit()
     except sqlite3.OperationalError:
         pass  # Ya existe
+
+    # Agregar columna en_stock a precios si no existe
+    cursor.execute("PRAGMA table_info(precios)")
+    columnas = [col[1] for col in cursor.fetchall()]
+    if "en_stock" not in columnas:
+        cursor.execute("ALTER TABLE precios ADD COLUMN en_stock INTEGER DEFAULT 1")
 
     conn.commit()
     return conn
@@ -288,10 +295,12 @@ def guardar_en_db(conn, productos, fecha_scraping):
         # Precio lista (para indicador de descuento)
         precio_lista = p.get("precio_lista")
 
+        en_stock = p.get("en_stock", 1)
+
         cursor.execute(
-            """INSERT INTO precios (producto_id, tienda_id, precio, precio_por_unidad, precio_lista, fecha_scraping)
-               VALUES (?, ?, ?, ?, ?, ?)""",
-            (producto_id, tienda_id, precio, precio_por_unidad, precio_lista, fecha_scraping),
+            """INSERT INTO precios (producto_id, tienda_id, precio, precio_por_unidad, precio_lista, fecha_scraping, en_stock)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (producto_id, tienda_id, precio, precio_por_unidad, precio_lista, fecha_scraping, en_stock),
         )
         insertados += 1
 
@@ -696,7 +705,7 @@ def leer_csv(ruta):
     with open(ruta, "r", encoding="utf-8") as archivo:
         lector = csv.DictReader(archivo)
         for fila in lector:
-            for campo in ("precio", "cantidad_unidades", "precio_por_unidad", "precio_lista"):
+            for campo in ("precio", "cantidad_unidades", "precio_por_unidad", "precio_lista", "en_stock"):
                 if fila.get(campo):
                     try:
                         fila[campo] = int(fila[campo])
@@ -704,6 +713,9 @@ def leer_csv(ruta):
                         fila[campo] = None
                 else:
                     fila[campo] = None
+            # en_stock default a 1 si no viene en el CSV
+            if fila.get("en_stock") is None:
+                fila["en_stock"] = 1
             productos.append(fila)
 
     return productos

@@ -332,6 +332,7 @@ def extraer_productos(soup):
                 "url": url,
                 "tienda": "Farmacias Ahumada",
                 "fecha_extraccion": timestamp,
+                "en_stock": 1,
             }
             productos.append(producto)
 
@@ -399,6 +400,7 @@ def guardar_csv(productos, ruta_archivo):
         "url",
         "tienda",
         "fecha_extraccion",
+        "en_stock",
     ]
 
     with open(ruta_archivo, "w", newline="", encoding="utf-8") as archivo:

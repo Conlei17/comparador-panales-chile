@@ -711,7 +711,8 @@ def buscar_productos(marca=None, talla=None, tallas_edad=None,
 
     query = f"""
         SELECT p.nombre, p.marca, p.tamano_unidades, p.url, p.imagen_url,
-               pr.precio, pr.precio_por_unidad, pr.precio_lista, t.nombre as tienda
+               pr.precio, pr.precio_por_unidad, pr.precio_lista, t.nombre as tienda,
+               pr.en_stock
         FROM precios pr
         JOIN productos p ON p.id = pr.producto_id
         JOIN tiendas t ON t.id = pr.tienda_id
@@ -744,10 +745,10 @@ def buscar_productos(marca=None, talla=None, tallas_edad=None,
             query += " AND p.nombre LIKE ?"
             params.append(f"%{palabra}%")
 
-    # Deduplicar (mismo producto + tienda) y ordenar
+    # Deduplicar (mismo producto + tienda) y ordenar (agotados al final)
     query += " GROUP BY p.id, t.id"
     orden_sql = ORDEN_PERMITIDO.get(orden, ORDEN_PERMITIDO["precio_por_unidad"])
-    query += f" ORDER BY {orden_sql}"
+    query += f" ORDER BY pr.en_stock DESC, {orden_sql}"
 
     cursor.execute(query, params)
     rows = cursor.fetchall()
@@ -807,7 +808,7 @@ def calcular_ahorro(productos):
     if len(productos) < 2:
         return None
 
-    con_ppu = [p for p in productos if p.get("precio_por_unidad")]
+    con_ppu = [p for p in productos if p.get("precio_por_unidad") and p.get("en_stock", 1)]
     if len(con_ppu) < 2:
         return None
 
@@ -850,6 +851,8 @@ def obtener_top_por_talla(marca=None, tiendas_sel=None, precio_max=None,
     for p in productos:
         t = p.get("talla")
         if not t:
+            continue
+        if not p.get("en_stock", 1):
             continue
         if t not in mejor_por_talla:
             mejor_por_talla[t] = p
@@ -941,7 +944,7 @@ def obtener_productos_agrupados():
     query = f"""
         SELECT p.id, p.nombre, p.marca, p.tamano_unidades, p.imagen_url,
                pr.precio, pr.precio_por_unidad, pr.precio_lista,
-               t.nombre as tienda, p.url
+               t.nombre as tienda, p.url, pr.en_stock
         FROM precios pr
         JOIN productos p ON p.id = pr.producto_id
         JOIN tiendas t ON t.id = pr.tienda_id
@@ -949,7 +952,7 @@ def obtener_productos_agrupados():
           AND pr.precio IS NOT NULL
           {query_excluir_no_panales()}
         GROUP BY p.id, t.id
-        ORDER BY pr.precio_por_unidad ASC
+        ORDER BY pr.en_stock DESC, pr.precio_por_unidad ASC
     """
     cursor.execute(query, [ultima_fecha])
     rows = cursor.fetchall()
@@ -1365,8 +1368,9 @@ def producto_detalle(cat_slug, marca_slug, producto_slug):
     if grupo["cat_slug"] != cat_slug or grupo["marca_slug"] != marca_slug:
         abort(404)
 
-    # Ordenar ofertas por precio_por_unidad
+    # Ordenar ofertas: en stock primero, luego por precio_por_unidad
     ofertas = sorted(grupo["ofertas"], key=lambda o: (
+        0 if o.get("en_stock", 1) else 1,
         0 if o.get("precio_por_unidad") else 1,
         o.get("precio_por_unidad") or 0,
         o.get("precio") or 0,
@@ -1382,9 +1386,10 @@ def producto_detalle(cat_slug, marca_slug, producto_slug):
             oferta["descuento_pct"] = None
             oferta["precio_lista"] = None
 
-    # Mejor precio
-    mejor_precio = ofertas[0].get("precio") if ofertas else None
-    mejor_ppu = ofertas[0].get("precio_por_unidad") if ofertas else None
+    # Mejor precio (solo de ofertas en stock)
+    ofertas_en_stock = [o for o in ofertas if o.get("en_stock", 1)]
+    mejor_precio = ofertas_en_stock[0].get("precio") if ofertas_en_stock else None
+    mejor_ppu = ofertas_en_stock[0].get("precio_por_unidad") if ofertas_en_stock else None
 
     # Consultar historico para cada producto_id, agrupado por tienda
     conn = conectar_db()
@@ -1428,13 +1433,15 @@ def producto_detalle(cat_slug, marca_slug, producto_slug):
         if (g_marca == marca_lower and g_talla == (talla_actual or "")
                 and g_cantidad != (cantidad_actual or 0)
                 and g["cat_slug"] == cat_slug):
-            # Calcular mejor PPU y precio de este grupo
+            # Calcular mejor PPU y precio de este grupo (solo en stock)
             ofertas_g = sorted(g["ofertas"], key=lambda o: (
+                0 if o.get("en_stock", 1) else 1,
                 0 if o.get("precio_por_unidad") else 1,
                 o.get("precio_por_unidad") or 0,
                 o.get("precio") or 0,
             ))
-            mejor = ofertas_g[0] if ofertas_g else None
+            ofertas_en_stock_g = [o for o in ofertas_g if o.get("en_stock", 1)]
+            mejor = ofertas_en_stock_g[0] if ofertas_en_stock_g else (ofertas_g[0] if ofertas_g else None)
             if mejor:
                 otras_presentaciones.append({
                     "cantidad": g_cantidad,

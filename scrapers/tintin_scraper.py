@@ -204,6 +204,7 @@ def extraer_productos(soup):
                 "url": url,
                 "tienda": "Pañales Tin Tin",
                 "fecha_extraccion": timestamp,
+                "en_stock": 1,
             }
             productos.append(producto)
 
@@ -225,7 +226,7 @@ def guardar_csv(productos, ruta_archivo):
     columnas = [
         "nombre", "precio", "marca", "cantidad_unidades",
         "precio_por_unidad", "imagen", "precio_lista",
-        "url", "tienda", "fecha_extraccion",
+        "url", "tienda", "fecha_extraccion", "en_stock",
     ]
 
     with open(ruta_archivo, "w", newline="", encoding="utf-8") as archivo:

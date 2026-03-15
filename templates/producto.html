@@ -70,7 +70,7 @@
           "@type": "Offer",
           "price": "{{ o.precio }}",
           "priceCurrency": "CLP",
-          "availability": "https://schema.org/InStock",
+          "availability": "https://schema.org/{{ 'InStock' if o.en_stock else 'OutOfStock' }}",
           "seller": {"@type": "Organization", "name": "{{ o.tienda|e }}"}
           {% if o.url %},"url": "{{ o.url }}"{% endif %}
         }{{ "," if not loop.last else "" }}
@@ -189,7 +189,7 @@
         </thead>
         <tbody>
           {% for o in ofertas %}
-          <tr class="{{ 'fila-mejor' if loop.first else '' }}">
+          <tr class="{{ 'fila-mejor' if loop.first and o.en_stock else '' }}{{ ' fila-agotado' if not o.en_stock else '' }}">
             <td class="col-tienda">
               {% if logos_tiendas.get(o.tienda) %}
                 <img src="{{ url_for('static', filename='logos/' + logos_tiendas[o.tienda]) }}" alt="{{ o.tienda }}" class="logo-tienda">
@@ -198,7 +198,9 @@
             </td>
             <td class="col-nombre" title="{{ o.nombre }}">
               {{ o.nombre }}
-              {% if loop.first %}
+              {% if not o.en_stock %}
+                <span class="badge-agotado">Agotado</span>
+              {% elif o.precio == mejor_precio and o.en_stock %}
                 <span class="badge-mejor">Mejor precio</span>
               {% endif %}
             </td>
@@ -229,10 +231,12 @@
     <!-- Cards (movil) -->
     <div class="cards">
       {% for o in ofertas %}
-      <div class="card {{ 'card-mejor' if loop.first else '' }}">
+      <div class="card {{ 'card-mejor' if loop.first and o.en_stock else '' }}{{ ' card-agotado' if not o.en_stock else '' }}">
         <div class="card-header">
           <span class="card-nombre">{{ o.nombre }}</span>
-          {% if loop.first %}
+          {% if not o.en_stock %}
+            <span class="badge-agotado">Agotado</span>
+          {% elif o.precio == mejor_precio and o.en_stock %}
             <span class="badge-mejor">Mejor precio</span>
           {% endif %}
         </div>

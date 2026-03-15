@@ -109,7 +109,7 @@ body {
   transition: background-color 0.3s, color 0.3s;
 }
 
-h1, h2, h3, .badge-mejor, .badge-descuento, .top-tallas-titulo, .ahorro-header {
+h1, h2, h3, .badge-mejor, .badge-descuento, .badge-agotado, .top-tallas-titulo, .ahorro-header {
   font-family: 'Nunito', sans-serif;
 }
 
@@ -400,6 +400,29 @@ tbody td {
 
 .fila-mejor .col-ppu {
   color: var(--best-green);
+}
+
+/* Producto agotado */
+.badge-agotado {
+  display: inline-block;
+  background: #999;
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 0.2rem 0.5rem;
+  border-radius: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-left: 0.4rem;
+  white-space: nowrap;
+}
+
+.fila-agotado {
+  opacity: 0.55;
+}
+
+.card-agotado {
+  opacity: 0.55;
 }
 
 /* --- Link a tienda --- */

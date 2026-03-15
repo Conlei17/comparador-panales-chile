@@ -266,6 +266,8 @@ def procesar_hit(hit):
             else:
                 precio_por_unidad = round(precio / cantidad)
 
+        en_stock = 1 if hit.get("orderable", True) else 0
+
         return {
             "nombre": nombre,
             "precio": precio,
@@ -277,6 +279,7 @@ def procesar_hit(hit):
             "url": url,
             "tienda": "Cruz Verde",
             "fecha_extraccion": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "en_stock": en_stock,
         }
 
     except Exception as e:
@@ -305,6 +308,7 @@ def guardar_csv(productos, ruta_archivo):
         "url",
         "tienda",
         "fecha_extraccion",
+        "en_stock",
     ]
 
     with open(ruta_archivo, "w", newline="", encoding="utf-8") as archivo:

@@ -166,57 +166,75 @@ def extraer_cantidad_del_nombre(nombre_producto):
     return None
 
 
-def extraer_cantidad_desde_detalle(url):
+def extraer_detalle_producto(url):
     """
     Visita la pagina individual de un producto para obtener la cantidad
-    real de panales desde la ficha tecnica.
+    real de panales desde la ficha tecnica y el estado de stock.
 
     En Pepito, la ficha tecnica usa un formato de lista de definiciones (<dl>):
       - "CANTIDAD POR PACK: 96"  -> para packs (X3, X6, etc.)
       - "CANTIDAD POR ENVASE: 32" -> para productos unitarios
 
-    Priorizamos CANTIDAD POR PACK (total de panales en el pack completo)
-    y usamos CANTIDAD POR ENVASE como respaldo.
+    El stock se detecta del JSON embebido ("stock": 0) o del Schema.org
+    (availability: OutOfStock).
 
     Retorna:
-        int con la cantidad de panales, o None si no se pudo obtener.
+        dict con {"cantidad": int|None, "en_stock": int (1 o 0)}
     """
     if not url:
-        return None
+        return {"cantidad": None, "en_stock": 1}
 
     try:
         soup = obtener_pagina(url, HEADERS, TIMEOUT)
         if not soup:
-            return None
+            return {"cantidad": None, "en_stock": 1}
 
-        # Buscamos en el texto completo de la pagina
         texto = soup.get_text()
+
+        # --- STOCK ---
+        en_stock = 1
+        # Buscar "stock": 0 en scripts JSON
+        for script in soup.select("script"):
+            script_text = script.string or ""
+            if '"stock"' in script_text:
+                match_stock = re.search(r'"stock"\s*:\s*(\d+)', script_text)
+                if match_stock and int(match_stock.group(1)) == 0:
+                    en_stock = 0
+                    break
+        # Fallback: Schema.org OutOfStock
+        if en_stock and "OutOfStock" in texto:
+            en_stock = 0
+
+        # --- CANTIDAD ---
+        cantidad = None
 
         # Prioridad 1: "CANTIDAD POR PACK" (total de panales en packs multiples)
         match_pack = re.search(
             r"CANTIDAD\s+POR\s+PACK\s*:\s*(\d+)", texto, re.IGNORECASE
         )
         if match_pack:
-            return int(match_pack.group(1))
+            cantidad = int(match_pack.group(1))
 
         # Prioridad 2: "CANTIDAD POR ENVASE" (panales en un paquete individual)
-        match_envase = re.search(
-            r"CANTIDAD\s+POR\s+ENVASE\s*:\s*(\d+)", texto, re.IGNORECASE
-        )
-        if match_envase:
-            return int(match_envase.group(1))
+        if not cantidad:
+            match_envase = re.search(
+                r"CANTIDAD\s+POR\s+ENVASE\s*:\s*(\d+)", texto, re.IGNORECASE
+            )
+            if match_envase:
+                cantidad = int(match_envase.group(1))
 
         # Prioridad 3: "N PAÑALES POR PAQUETE" en la descripcion
-        match_desc = re.search(
-            r"(\d+)\s*(?:pa[ñn]ales|unidades)\s+por\s+paquete", texto, re.IGNORECASE
-        )
-        if match_desc:
-            return int(match_desc.group(1))
+        if not cantidad:
+            match_desc = re.search(
+                r"(\d+)\s*(?:pa[ñn]ales|unidades)\s+por\s+paquete", texto, re.IGNORECASE
+            )
+            if match_desc:
+                cantidad = int(match_desc.group(1))
 
-        return None
+        return {"cantidad": cantidad, "en_stock": en_stock}
 
     except Exception:
-        return None
+        return {"cantidad": None, "en_stock": 1}
 
 
 def extraer_productos(soup):
@@ -245,6 +263,14 @@ def extraer_productos(soup):
 
     for bloque in bloques:
         try:
+            # --- STOCK ---
+            agotado = False
+            stock_elem = bloque.select_one('.product-stock[data-label="out-of-stock"]')
+            if stock_elem:
+                agotado = True
+            elif "agotado" in bloque.get_text(separator=" ", strip=True).lower():
+                agotado = True
+
             # --- NOMBRE DEL PRODUCTO ---
             nombre_elem = bloque.select_one(".product-block__name")
             if not nombre_elem:
@@ -305,6 +331,7 @@ def extraer_productos(soup):
                 "url": url,
                 "tienda": "Distribuidora Pepito",
                 "fecha_extraccion": timestamp,
+                "en_stock": 0 if agotado else 1,
             }
             productos.append(producto)
 
@@ -336,6 +363,7 @@ def guardar_csv(productos, ruta_archivo):
         "url",
         "tienda",
         "fecha_extraccion",
+        "en_stock",
     ]
 
     with open(ruta_archivo, "w", newline="", encoding="utf-8") as archivo:
@@ -411,24 +439,19 @@ def enriquecer_con_detalle(productos):
     Solo visita productos que aun no tienen cantidad definida
     (los que ya tienen "N UNIDADES" en el nombre se saltan).
     """
-    sin_cantidad = [p for p in productos if p["cantidad_unidades"] is None and p["url"]]
-    con_cantidad = len(productos) - len(sin_cantidad)
+    con_url = [p for p in productos if p["url"]]
 
-    print(f"\n  Productos que ya tienen cantidad: {con_cantidad}")
-    print(f"  Productos que necesitan visitar detalle: {len(sin_cantidad)}")
+    print(f"\n  Visitando {len(con_url)} paginas individuales (cantidad + stock)...")
 
-    if not sin_cantidad:
-        return
+    for i, producto in enumerate(con_url, 1):
+        if i % 10 == 1 or i == len(con_url):
+            print(f"    Progreso: {i}/{len(con_url)}...")
 
-    print(f"  Visitando paginas individuales (esto toma un momento)...")
-
-    for i, producto in enumerate(sin_cantidad, 1):
-        if i % 10 == 1 or i == len(sin_cantidad):
-            print(f"    Progreso: {i}/{len(sin_cantidad)}...")
-
-        cantidad = extraer_cantidad_desde_detalle(producto["url"])
-        if cantidad:
-            producto["cantidad_unidades"] = cantidad
+        detalle = extraer_detalle_producto(producto["url"])
+        if detalle:
+            if detalle["cantidad"] and producto["cantidad_unidades"] is None:
+                producto["cantidad_unidades"] = detalle["cantidad"]
+            producto["en_stock"] = detalle["en_stock"]
 
         time.sleep(PAUSA_ENTRE_PRODUCTOS)
 
@@ -441,7 +464,10 @@ def enriquecer_con_detalle(productos):
 
     # Resumen
     total_con_cantidad = sum(1 for p in productos if p["cantidad_unidades"] is not None)
+    agotados = sum(1 for p in productos if not p.get("en_stock", 1))
     print(f"  Cantidad obtenida para {total_con_cantidad} de {len(productos)} productos")
+    if agotados:
+        print(f"  Productos agotados detectados: {agotados}")
 
 
 def main():

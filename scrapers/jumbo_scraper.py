@@ -401,6 +401,24 @@ def extraer_productos_de_json(data):
         if not es_producto_relevante(nombre):
             continue
 
+        # Disponibilidad: AvailableQuantity en commertialOffer
+        en_stock = 1
+        if items and isinstance(items, list):
+            for item in items:
+                if not isinstance(item, dict):
+                    continue
+                sellers = item.get("sellers", [])
+                if sellers and isinstance(sellers, list):
+                    for seller in sellers:
+                        oferta = seller.get("commertialOffer", {})
+                        qty = oferta.get("AvailableQuantity", 0)
+                        if isinstance(qty, (int, float)) and qty > 0:
+                            en_stock = 1
+                            break
+                        else:
+                            en_stock = 0
+                    break
+
         producto = {
             "nombre": nombre,
             "precio": precio,
@@ -412,6 +430,7 @@ def extraer_productos_de_json(data):
             "fecha_extraccion": timestamp,
             "imagen": imagen,
             "precio_lista": precio_lista,
+            "en_stock": en_stock,
         }
         productos.append(producto)
 
@@ -541,6 +560,7 @@ def guardar_csv(productos, ruta_archivo):
         "fecha_extraccion",
         "imagen",
         "precio_lista",
+        "en_stock",
     ]
 
     with open(ruta_archivo, "w", newline="", encoding="utf-8") as archivo:

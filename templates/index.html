@@ -72,7 +72,7 @@
             "@type": "Offer",
             "price": "{{ p.precio }}",
             "priceCurrency": "CLP",
-            "availability": "https://schema.org/InStock",
+            "availability": "https://schema.org/{{ 'InStock' if p.en_stock else 'OutOfStock' }}",
             "seller": {"@type": "Organization", "name": "{{ p.tienda|e }}"}
           }
         }
@@ -357,7 +357,7 @@
           </thead>
           <tbody>
             {% for p in productos %}
-            <tr class="{{ 'fila-mejor' if loop.first else '' }}">
+            <tr class="{{ 'fila-mejor' if loop.first and p.en_stock else '' }}{{ ' fila-agotado' if not p.en_stock else '' }}">
               <td>
                 <input type="checkbox" class="comparar-cb"
                   data-producto='{{ {"nombre": p.nombre, "precio": p.precio, "ppu": p.precio_por_unidad, "cantidad": p.tamano_unidades, "tienda": p.tienda, "imagen": p.imagen_url or "", "url": p.url|utm or ""}|tojson }}'
@@ -380,7 +380,9 @@
                 {% else %}
                   {{ p.nombre }}
                 {% endif %}
-                {% if loop.first %}
+                {% if not p.en_stock %}
+                  <span class="badge-agotado">Agotado</span>
+                {% elif loop.first %}
                   <span class="badge-mejor">Mejor precio</span>
                 {% endif %}
               </td>
@@ -419,7 +421,7 @@
       <!-- Cards (movil) -->
       <div class="cards">
         {% for p in productos %}
-        <div class="card {{ 'card-mejor' if loop.first else '' }}">
+        <div class="card {{ 'card-mejor' if loop.first and p.en_stock else '' }}{{ ' card-agotado' if not p.en_stock else '' }}">
           <div class="card-header">
             <input type="checkbox" class="comparar-cb"
               data-producto='{{ {"nombre": p.nombre, "precio": p.precio, "ppu": p.precio_por_unidad, "cantidad": p.tamano_unidades, "tienda": p.tienda, "imagen": p.imagen_url or "", "url": p.url|utm or ""}|tojson }}'
@@ -432,7 +434,9 @@
             {% else %}
               <span class="card-nombre">{{ p.nombre }}</span>
             {% endif %}
-            {% if loop.first %}
+            {% if not p.en_stock %}
+              <span class="badge-agotado">Agotado</span>
+            {% elif loop.first %}
               <span class="badge-mejor">Mejor precio</span>
             {% endif %}
           </div>

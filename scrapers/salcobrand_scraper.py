@@ -466,6 +466,7 @@ def procesar_producto(url, data):
             "url": url,
             "tienda": "Salcobrand",
             "fecha_extraccion": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "en_stock": 1,
         }
 
     except Exception as e:
@@ -494,6 +495,7 @@ def guardar_csv(productos, ruta_archivo):
         "url",
         "tienda",
         "fecha_extraccion",
+        "en_stock",
     ]
 
     with open(ruta_archivo, "w", newline="", encoding="utf-8") as archivo:

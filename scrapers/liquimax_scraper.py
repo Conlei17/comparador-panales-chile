@@ -193,6 +193,7 @@ def extraer_productos(soup):
                         "url": f"https://www.liquimax.cl{href}" if href.startswith("/") else href,
                         "tienda": "Liquimax",
                         "fecha_extraccion": timestamp,
+                        "en_stock": 1,
                     }
                     productos.append(producto)
         return productos
@@ -278,6 +279,7 @@ def extraer_productos(soup):
                 "url": url,
                 "tienda": "Liquimax",
                 "fecha_extraccion": timestamp,
+                "en_stock": 1,
             }
             productos.append(producto)
 
@@ -313,6 +315,7 @@ def guardar_csv(productos, ruta_archivo):
         "url",
         "tienda",
         "fecha_extraccion",
+        "en_stock",
     ]
 
     with open(ruta_archivo, "w", newline="", encoding="utf-8") as archivo:
