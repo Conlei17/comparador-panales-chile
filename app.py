@@ -199,6 +199,7 @@ LOGOS_TIENDAS = {
     "Farmacias Ahumada": "ahumada.png",
     "Cruz Verde": "cruzverde.png",
     "Salcobrand": "salcobrand.svg",
+    "MercadoLibre": "mercadolibre.png",
 }
 
 # Columnas permitidas para ordenar (whitelist contra SQL injection)

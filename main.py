@@ -238,6 +238,7 @@ def guardar_en_db(conn, productos, fecha_scraping):
         "Farmacias Ahumada": "https://www.farmaciasahumada.cl",
         "Cruz Verde": "https://www.cruzverde.cl",
         "Salcobrand": "https://salcobrand.cl",
+        "MercadoLibre": "https://www.mercadolibre.cl",
     }
 
     insertados = 0
@@ -373,6 +374,7 @@ _SCRAPER_A_TIENDA = {
     "cruzverde": "Cruz Verde",
     "salcobrand": "Salcobrand",
     "preunic": "Preunic",
+    "mercadolibre": "MercadoLibre",
 }
 
 
@@ -670,6 +672,26 @@ def ejecutar_scraper_salcobrand():
         return False
 
 
+def ejecutar_scraper_mercadolibre():
+    """
+    Ejecuta el scraper de MercadoLibre.
+    Retorna True si se ejecuto correctamente.
+    """
+    print("\n")
+    print("=" * 60)
+    print("EJECUTANDO SCRAPER: MercadoLibre")
+    print("=" * 60)
+
+    try:
+        from scrapers import mercadolibre_scraper
+        mercadolibre_scraper.main()
+        return True
+    except Exception as e:
+        print(f"ERROR ejecutando scraper de MercadoLibre: {e}")
+        print("Continuando con los demas scrapers...\n")
+        return False
+
+
 # =============================================================
 # PROCESAMIENTO DE CSV
 # =============================================================
@@ -860,6 +882,7 @@ def main():
         "cruzverde": ejecutar_scraper_cruzverde,
         "salcobrand": ejecutar_scraper_salcobrand,
         "preunic": ejecutar_scraper_preunic,
+        "mercadolibre": ejecutar_scraper_mercadolibre,
     }
 
     resultados = {}
@@ -901,6 +924,7 @@ def main():
         "Cruz Verde": os.path.join(CARPETA_DATOS, "cruzverde_precios.csv"),
         "Salcobrand": os.path.join(CARPETA_DATOS, "salcobrand_precios.csv"),
         "Preunic": os.path.join(CARPETA_DATOS, "preunic_precios.csv"),
+        "MercadoLibre": os.path.join(CARPETA_DATOS, "mercadolibre_precios.csv"),
     }
 
     for tienda, ruta in archivos_csv.items():

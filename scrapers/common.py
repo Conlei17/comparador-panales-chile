@@ -118,8 +118,16 @@ def extraer_marca(nombre_producto, marca_api=None):
         if sublinea in nombre_lower:
             return marca
 
-    primera_palabra = nombre_producto.split()[0] if nombre_producto.split() else "Desconocida"
-    return primera_palabra
+    # Fallback: primera palabra, salvo que sea una palabra generica de producto
+    _PALABRAS_GENERICAS = {
+        "pañal", "pañales", "panal", "panales", "toallita", "toallitas",
+        "toalla", "toallas", "formula", "fórmula", "leche", "pack",
+        "set", "caja", "recarga", "calentador",
+    }
+    primera_palabra = nombre_producto.split()[0] if nombre_producto.split() else ""
+    if primera_palabra and primera_palabra.lower() not in _PALABRAS_GENERICAS and not primera_palabra.isdigit():
+        return primera_palabra
+    return "Desconocida"
 
 
 def es_formula(nombre):
