@@ -27,6 +27,11 @@ try:
 except ImportError:
     from http_utils import obtener_pagina
 
+try:
+    from scrapers.common import (limpiar_precio, extraer_marca, calcular_precio_por_unidad, guardar_csv)
+except ImportError:
+    from common import (limpiar_precio, extraer_marca, calcular_precio_por_unidad, guardar_csv)
+
 # --- CONFIGURACION ---
 
 # URLs de las categorias de panales que queremos scrapear
@@ -92,57 +97,6 @@ def detectar_total_paginas(soup):
                 max_pagina = numero
 
     return max_pagina
-
-
-def limpiar_precio(texto_precio):
-    """
-    Convierte un texto de precio como "$14.990 CLP" en un numero entero: 14990.
-
-    Retorna:
-        int o None si no se pudo convertir.
-    """
-    if not texto_precio:
-        return None
-
-    # Eliminamos todo excepto digitos
-    solo_numeros = re.sub(r"[^\d]", "", texto_precio)
-
-    if solo_numeros:
-        return int(solo_numeros)
-    return None
-
-
-def extraer_marca_del_nombre(nombre_producto):
-    """
-    Intenta detectar la marca del producto a partir de su nombre.
-    Se usa como respaldo si no se encuentra la marca en el HTML.
-    """
-    marcas_conocidas = [
-        "Pampers",
-        "Huggies",
-        "Babysec",
-        "Cotidian",
-        "Goodnites",
-        "Win",
-        "Tutte",
-        "Pequenin",
-        "Tena",
-        "Plenitud",
-        "Ladysoft",
-        "Aiwibi",
-        "Emubaby",
-        "Moltex",
-        "Chelino",
-        "Bambo",
-    ]
-
-    nombre_lower = nombre_producto.lower()
-    for marca in marcas_conocidas:
-        if marca.lower() in nombre_lower:
-            return marca
-
-    primera_palabra = nombre_producto.split()[0] if nombre_producto.split() else "Desconocida"
-    return primera_palabra
 
 
 def extraer_cantidad_del_nombre(nombre_producto):
@@ -293,7 +247,7 @@ def extraer_productos(soup):
             if marca_elem:
                 marca = marca_elem.get_text(strip=True)
             else:
-                marca = extraer_marca_del_nombre(nombre)
+                marca = extraer_marca(nombre)
 
             # --- PRECIO ---
             # Si hay descuento, el precio actual esta en .product-block__price--new
@@ -340,39 +294,6 @@ def extraer_productos(soup):
             continue
 
     return productos
-
-
-def guardar_csv(productos, ruta_archivo):
-    """
-    Guarda la lista de productos en un archivo CSV.
-    """
-    if not productos:
-        print("No hay productos para guardar.")
-        return
-
-    os.makedirs(os.path.dirname(ruta_archivo), exist_ok=True)
-
-    columnas = [
-        "nombre",
-        "precio",
-        "marca",
-        "cantidad_unidades",
-        "precio_por_unidad",
-        "imagen",
-        "precio_lista",
-        "url",
-        "tienda",
-        "fecha_extraccion",
-        "en_stock",
-    ]
-
-    with open(ruta_archivo, "w", newline="", encoding="utf-8") as archivo:
-        escritor = csv.DictWriter(archivo, fieldnames=columnas)
-        escritor.writeheader()
-        escritor.writerows(productos)
-
-    print(f"\nDatos guardados en: {ruta_archivo}")
-    print(f"Total de productos guardados: {len(productos)}")
 
 
 def scrapear_categoria(nombre_categoria, url_base):
@@ -459,8 +380,8 @@ def enriquecer_con_detalle(productos):
     for producto in productos:
         cantidad = producto["cantidad_unidades"]
         precio = producto["precio"]
-        if precio and cantidad and cantidad > 0:
-            producto["precio_por_unidad"] = round(precio / cantidad)
+        nombre = producto["nombre"]
+        producto["precio_por_unidad"] = calcular_precio_por_unidad(precio, cantidad, nombre)
 
     # Resumen
     total_con_cantidad = sum(1 for p in productos if p["cantidad_unidades"] is not None)

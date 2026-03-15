@@ -27,6 +27,13 @@ try:
 except ImportError:
     from http_utils import obtener_texto
 
+try:
+    from scrapers.common import (extraer_marca, extraer_cantidad, es_formula,
+                                  calcular_precio_por_unidad, guardar_csv)
+except ImportError:
+    from common import (extraer_marca, extraer_cantidad, es_formula,
+                        calcular_precio_por_unidad, guardar_csv)
+
 # --- CONFIGURACION ---
 
 # URL del sitemap principal
@@ -207,20 +214,6 @@ EXCLUIR_NOMBRE = [
     "oftálmic",
 ]
 
-# Marcas conocidas para deteccion
-MARCAS_CONOCIDAS = [
-    "Pampers", "Huggies", "Babysec", "Goodnites",
-    "Tutte", "Pequenin", "Aiwibi", "Emubaby", "Moltex", "Chelino",
-    "Bambo", "Pingo", "Naty", "Eco Boom", "Biobaby",
-    "Nan", "Similac", "Nidal", "Enfamil", "S-26", "Alula",
-    "Nutrilon", "Blemil", "Nestogen",
-    "Johnsons", "Johnson",
-    "Aqua Baby", "WaterWipes", "Waterwipes",
-    "Nenitos", "Neniwipes", "Merries",
-    "Terra", "Althera", "Twistshake",
-    "Cell Skin", "Simond",
-]
-
 # URL base para productos
 URL_BASE_PRODUCTO = "https://salcobrand.cl"
 
@@ -327,83 +320,6 @@ def extraer_product_data(html):
             return None
 
 
-def extraer_marca(nombre, vendor=None):
-    """
-    Detecta la marca del producto. Usa el campo vendor de la API si existe,
-    luego busca marcas conocidas en el nombre.
-    """
-    if vendor:
-        vendor_clean = vendor.strip()
-        if vendor_clean and vendor_clean.lower() not in ("", "salcobrand", "none"):
-            return vendor_clean
-
-    if not nombre:
-        return "Desconocida"
-
-    nombre_lower = nombre.lower()
-    for marca in MARCAS_CONOCIDAS:
-        if marca.lower() in nombre_lower:
-            return marca
-
-    # Sublíneas de producto
-    SUBLINEAS_MARCA = [
-        ("premium care", "Pampers"),
-        ("confort sec", "Pampers"),
-        ("super premium", "Babysec"),
-        ("premium", "Babysec"),
-        ("ultrasuave", "Emubaby"),
-    ]
-    for sublinea, marca in SUBLINEAS_MARCA:
-        if sublinea in nombre_lower:
-            return marca
-
-    return "Desconocida"
-
-
-FORMULAS_KEYWORDS = [
-    "fórmula", "formula", "leche infantil", "leche en polvo",
-    "nan ", "nido", "similac", "enfamil", "s-26", "s26",
-    "alula", "nidal", "nutrilon", "blemil",
-]
-
-
-def es_formula(nombre):
-    """Detecta si el producto es una fórmula infantil."""
-    nombre_lower = nombre.lower()
-    return any(kw in nombre_lower for kw in FORMULAS_KEYWORDS)
-
-
-def extraer_cantidad(nombre):
-    """
-    Intenta extraer la cantidad de unidades del nombre del producto.
-    Para fórmulas infantiles, extrae el peso en gramos.
-    """
-    # Para fórmulas: extraer peso en gramos o kilogramos
-    if es_formula(nombre):
-        match_kg = re.search(r"(\d+(?:[.,]\d+)?)\s*kg\b", nombre, re.IGNORECASE)
-        if match_kg:
-            return int(float(match_kg.group(1).replace(",", ".")) * 1000)
-        match_gramos = re.search(r"(\d+)\s*(?:g|grs|gr|gramos)\b", nombre, re.IGNORECASE)
-        if match_gramos:
-            return int(match_gramos.group(1))
-
-    patrones = [
-        r"(\d+)\s*(?:pa[ñn]ales)\b",
-        r"(\d+)\s*(?:toallitas|toallas)\b",
-        r"(\d+)\s*(?:unidades|unid|und)\b",
-        r"(\d+)\s*(?:hojas)\b",
-        r"x\s*(\d+)\s*(?:un|u)\b",
-        r"[xX](\d+)\b",
-        r"(\d+)\s*[uU]\b",
-        r"(\d+)\s*(?:un)\b",
-    ]
-    for patron in patrones:
-        match = re.search(patron, nombre, re.IGNORECASE)
-        if match:
-            return int(match.group(1))
-    return None
-
-
 def procesar_producto(url, data):
     """
     Convierte los datos extraidos de product_traker_data al formato estandar.
@@ -442,18 +358,13 @@ def procesar_producto(url, data):
 
         # Marca
         vendor = data.get("vendor")
-        marca = extraer_marca(nombre, vendor)
+        marca = extraer_marca(nombre, marca_api=vendor)
 
         # Cantidad
         cantidad = extraer_cantidad(nombre)
 
         # Precio por unidad (precio/kg para fórmulas, precio/unidad para el resto)
-        precio_por_unidad = None
-        if precio and cantidad and cantidad > 0:
-            if es_formula(nombre):
-                precio_por_unidad = round(precio / cantidad * 1000)
-            else:
-                precio_por_unidad = round(precio / cantidad)
+        precio_por_unidad = calcular_precio_por_unidad(precio, cantidad, nombre)
 
         return {
             "nombre": nombre,
@@ -472,39 +383,6 @@ def procesar_producto(url, data):
     except Exception as e:
         print(f"  AVISO: Error procesando producto: {e}")
         return None
-
-
-def guardar_csv(productos, ruta_archivo):
-    """
-    Guarda la lista de productos en un archivo CSV.
-    """
-    if not productos:
-        print("No hay productos para guardar.")
-        return
-
-    os.makedirs(os.path.dirname(ruta_archivo), exist_ok=True)
-
-    columnas = [
-        "nombre",
-        "precio",
-        "marca",
-        "cantidad_unidades",
-        "precio_por_unidad",
-        "imagen",
-        "precio_lista",
-        "url",
-        "tienda",
-        "fecha_extraccion",
-        "en_stock",
-    ]
-
-    with open(ruta_archivo, "w", newline="", encoding="utf-8") as archivo:
-        escritor = csv.DictWriter(archivo, fieldnames=columnas)
-        escritor.writeheader()
-        escritor.writerows(productos)
-
-    print(f"\nDatos guardados en: {ruta_archivo}")
-    print(f"Total de productos guardados: {len(productos)}")
 
 
 def obtener_urls_combinadas():

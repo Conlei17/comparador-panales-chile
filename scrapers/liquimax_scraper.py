@@ -20,6 +20,13 @@ try:
 except ImportError:
     from http_utils import obtener_pagina
 
+try:
+    from scrapers.common import (limpiar_precio, extraer_marca, extraer_cantidad,
+                                  es_formula, calcular_precio_por_unidad, guardar_csv)
+except ImportError:
+    from common import (limpiar_precio, extraer_marca, extraer_cantidad,
+                        es_formula, calcular_precio_por_unidad, guardar_csv)
+
 # --- CONFIGURACION ---
 
 # URL base de la coleccion de panales
@@ -74,73 +81,6 @@ def detectar_total_paginas(soup):
                 max_pagina = numero
 
     return max_pagina
-
-
-def limpiar_precio(texto_precio):
-    """
-    Convierte un texto de precio como "$16.690" en un numero entero: 16690.
-
-    Retorna:
-        int o None si no se pudo convertir.
-    """
-    if not texto_precio:
-        return None
-
-    # Eliminamos todo excepto digitos (sacamos $, puntos, espacios, etc.)
-    solo_numeros = re.sub(r"[^\d]", "", texto_precio)
-
-    if solo_numeros:
-        return int(solo_numeros)
-    return None
-
-
-def extraer_marca(nombre_producto):
-    """
-    Intenta detectar la marca del producto a partir de su nombre.
-
-    Busca marcas conocidas de panales en Chile al inicio del nombre.
-    """
-    marcas_conocidas = [
-        "Pampers",
-        "Huggies",
-        "Babysec",
-        "Cotidian",
-        "Goodnites",
-        "Win",
-        "Tutte",
-        "Pequenin",
-        "Tena",
-        "Plenitud",
-        "Ladysoft",
-    ]
-
-    nombre_lower = nombre_producto.lower()
-    for marca in marcas_conocidas:
-        if marca.lower() in nombre_lower:
-            return marca
-
-    # Si no encontramos una marca conocida, usamos la primera palabra
-    primera_palabra = nombre_producto.split()[0] if nombre_producto.split() else "Desconocida"
-    return primera_palabra
-
-
-def extraer_cantidad(nombre_producto):
-    """
-    Intenta extraer la cantidad de unidades del nombre del producto.
-
-    Busca patrones como "52 Unidades", "128u", "48 Un", etc.
-    """
-    # Patron: numero seguido de "unidades", "un", "u", "und"
-    patron = re.search(r"(\d+)\s*(?:unidades|unid|und|un\b|u\b)", nombre_producto, re.IGNORECASE)
-    if patron:
-        return int(patron.group(1))
-
-    # Patron alternativo: "x" seguido de numero (ej: "x48")
-    patron_x = re.search(r"x\s*(\d+)", nombre_producto, re.IGNORECASE)
-    if patron_x:
-        return int(patron_x.group(1))
-
-    return None
 
 
 def extraer_productos(soup):
@@ -260,9 +200,7 @@ def extraer_productos(soup):
             cantidad = extraer_cantidad(nombre)
 
             # --- PRECIO POR UNIDAD ---
-            precio_por_unidad = None
-            if precio and cantidad and cantidad > 0:
-                precio_por_unidad = round(precio / cantidad)
+            precio_por_unidad = calcular_precio_por_unidad(precio, cantidad, nombre)
 
             # --- IMAGEN ---
             img_elem = contenedor.select_one("img")
@@ -288,43 +226,6 @@ def extraer_productos(soup):
             continue
 
     return productos
-
-
-def guardar_csv(productos, ruta_archivo):
-    """
-    Guarda la lista de productos en un archivo CSV.
-
-    Si el archivo ya existe, lo sobreescribe con datos frescos.
-    """
-    if not productos:
-        print("No hay productos para guardar.")
-        return
-
-    # Creamos la carpeta si no existe
-    os.makedirs(os.path.dirname(ruta_archivo), exist_ok=True)
-
-    # Definimos las columnas del CSV
-    columnas = [
-        "nombre",
-        "precio",
-        "marca",
-        "cantidad_unidades",
-        "precio_por_unidad",
-        "imagen",
-        "precio_lista",
-        "url",
-        "tienda",
-        "fecha_extraccion",
-        "en_stock",
-    ]
-
-    with open(ruta_archivo, "w", newline="", encoding="utf-8") as archivo:
-        escritor = csv.DictWriter(archivo, fieldnames=columnas)
-        escritor.writeheader()  # Escribe la fila de encabezados
-        escritor.writerows(productos)  # Escribe todos los productos
-
-    print(f"\nDatos guardados en: {ruta_archivo}")
-    print(f"Total de productos guardados: {len(productos)}")
 
 
 def main():

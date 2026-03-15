@@ -20,33 +20,29 @@ import sqlite3
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 
-# Palabras clave para detectar fórmulas infantiles
-FORMULAS_KEYWORDS = [
-    "fórmula", "formula", "leche infantil", "leche en polvo",
-    "nan ", "nido", "similac", "enfamil", "s-26", "s26",
-    "alula", "nidal", "nutrilon", "blemil",
-]
-
-
-def es_formula(nombre):
-    """Detecta si el producto es una fórmula infantil."""
-    nombre_lower = nombre.lower()
-    return any(kw in nombre_lower for kw in FORMULAS_KEYWORDS)
+from config import (
+    BASE_DIR, DATA_DIR, DB_PATH,
+    PRECIO_MIN, PRECIO_MAX, PPU_MIN, PPU_MAX,
+    PPU_FORMULA_MIN, PPU_FORMULA_MAX,
+    MONITOR_EMAIL, UMBRAL_ALERTA_PRODUCTOS, ARCHIVO_LOG_MONITOREO,
+    RESEND_API_KEY,
+)
+from scrapers.common import es_formula, FORMULAS_KEYWORDS
 
 
 # --- CONFIGURACION ---
 
 # Carpeta base del proyecto (donde esta este archivo)
-DIR_PROYECTO = os.path.dirname(os.path.abspath(__file__))
+DIR_PROYECTO = str(BASE_DIR)
 
 # Carpeta donde estan los datos
-CARPETA_DATOS = os.path.join(DIR_PROYECTO, "data")
+CARPETA_DATOS = str(DATA_DIR)
 
 # Archivo de salida consolidado (CSV, se sobreescribe cada vez)
 ARCHIVO_CONSOLIDADO = "precios_consolidados.csv"
 
 # Base de datos SQLite (historico, se acumula)
-ARCHIVO_DB = os.path.join(CARPETA_DATOS, "precios.db")
+ARCHIVO_DB = str(DB_PATH)
 
 # Columnas del CSV
 COLUMNAS = [
@@ -154,6 +150,9 @@ def inicializar_db():
     if "en_stock" not in columnas:
         cursor.execute("ALTER TABLE precios ADD COLUMN en_stock INTEGER DEFAULT 1")
 
+    # Optimizar planificador de queries con estadisticas actualizadas
+    conn.execute("ANALYZE")
+
     conn.commit()
     return conn
 
@@ -210,15 +209,7 @@ def obtener_o_crear_producto(cursor, nombre, marca, tamano_unidades, url, imagen
     return cursor.lastrowid
 
 
-# Rangos razonables para validacion de precios (CLP)
-PRECIO_MIN = 500
-PRECIO_MAX = 200000
-PPU_MIN = 10
-PPU_MAX = 2000
-
-# Rangos para formulas infantiles (precio por kg)
-PPU_FORMULA_MIN = 5000
-PPU_FORMULA_MAX = 80000
+# Rangos de validacion importados de config.py
 
 
 def guardar_en_db(conn, productos, fecha_scraping):
@@ -319,14 +310,7 @@ def guardar_en_db(conn, productos, fecha_scraping):
           f"{total_productos} productos, {dias} dia(s) de datos")
 
 
-# Umbral para alertar caida de productos (50% del promedio historico)
-UMBRAL_ALERTA_PRODUCTOS = 0.5
-
-# Log de monitoreo persistente
-ARCHIVO_LOG_MONITOREO = os.path.join(CARPETA_DATOS, "monitoreo_scrapers.log")
-
-# Email del operador para alertas criticas (variable de entorno)
-MONITOR_EMAIL = os.environ.get("MONITOR_EMAIL", "")
+# Constantes de monitoreo importadas de config.py
 
 
 def _escribir_log(lineas):
@@ -351,12 +335,11 @@ def _enviar_email_monitoreo(asunto, cuerpo_lineas):
         print("  [Monitor] Email no enviado (resend no instalado)")
         return False
 
-    api_key = os.environ.get("RESEND_API_KEY", "")
-    if not api_key:
+    if not RESEND_API_KEY:
         print("  [Monitor] Email no enviado (RESEND_API_KEY no configurado)")
         return False
 
-    resend.api_key = api_key
+    resend.api_key = RESEND_API_KEY
     email_from = os.environ.get("MONITOR_EMAIL_FROM",
                                 "Monitor BabyAhorro <alertas@babyahorro.cl>")
 

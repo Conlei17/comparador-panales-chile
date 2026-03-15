@@ -19,6 +19,13 @@ try:
 except ImportError:
     from http_utils import obtener_json
 
+try:
+    from scrapers.common import (extraer_marca, extraer_cantidad, es_formula,
+                                  calcular_precio_por_unidad, guardar_csv)
+except ImportError:
+    from common import (extraer_marca, extraer_cantidad, es_formula,
+                        calcular_precio_por_unidad, guardar_csv)
+
 # --- CONFIGURACION ---
 
 # Endpoint de la API Spree Storefront
@@ -64,83 +71,6 @@ PAUSA_ENTRE_PAGINAS = 2
 
 # URL base para construir URLs de productos
 URL_BASE_PRODUCTO = "https://preunic.cl/products"
-
-# Marcas conocidas para deteccion
-MARCAS_CONOCIDAS = [
-    "Pampers", "Huggies", "Babysec", "Cotidian", "Goodnites",
-    "Win", "Tutte", "Pequenin", "Tena", "Plenitud",
-    "Ladysoft", "Aiwibi", "Emubaby", "Moltex", "Chelino",
-    "Bambo", "Pingo", "Naty", "Eco Boom", "Biobaby",
-    "Nenitos", "Simmons", "Coombs",
-    "Johnsons", "Johnson",
-    "WaterWipes", "Waterwipes",
-    "Emuwipes", "Toddler", "Simonds",
-]
-
-FORMULAS_KEYWORDS = [
-    "fórmula", "formula", "leche infantil", "leche en polvo",
-    "nan ", "nido", "similac", "enfamil", "s-26", "s26",
-    "alula", "nidal", "nutrilon", "blemil",
-]
-
-
-def es_formula(nombre):
-    """Detecta si el producto es una formula infantil."""
-    nombre_lower = nombre.lower()
-    return any(kw in nombre_lower for kw in FORMULAS_KEYWORDS)
-
-
-def extraer_marca(nombre_producto, marca_api=None):
-    """
-    Detecta la marca del producto.
-    Prioriza la marca de la API, luego busca en el nombre.
-    """
-    if marca_api and marca_api.strip() and marca_api.lower() != "sin marca":
-        marca_api = marca_api.strip()
-        # Normalizar mayusculas: buscar en marcas conocidas por match case-insensitive
-        for marca in MARCAS_CONOCIDAS:
-            if marca.lower() == marca_api.lower():
-                return marca
-        # title() capitaliza despues de apostrofes; preservar original
-        return marca_api
-
-    nombre_lower = nombre_producto.lower()
-    for marca in MARCAS_CONOCIDAS:
-        if marca.lower() in nombre_lower:
-            return marca
-
-    primera_palabra = nombre_producto.split()[0] if nombre_producto.split() else "Desconocida"
-    return primera_palabra
-
-
-def extraer_cantidad(nombre_producto):
-    """
-    Extrae la cantidad de unidades del nombre del producto.
-    Para formulas infantiles, extrae el peso en gramos.
-    """
-    if es_formula(nombre_producto):
-        match_kg = re.search(r"(\d+(?:[.,]\d+)?)\s*kg\b", nombre_producto, re.IGNORECASE)
-        if match_kg:
-            return int(float(match_kg.group(1).replace(",", ".")) * 1000)
-        match_gramos = re.search(r"(\d+)\s*(?:g|grs|gr|gramos)\b", nombre_producto, re.IGNORECASE)
-        if match_gramos:
-            return int(match_gramos.group(1))
-
-    patrones = [
-        r"(\d+)\s*(?:pa[ñn]ales)\b",
-        r"(\d+)\s*(?:toallitas|toallas)\b",
-        r"(\d+)\s*(?:unidades|unid|und|uds)\b",
-        r"(\d+)\s*(?:hojas)\b",
-        r"x\s*(\d+)\s*(?:un|u)\b",
-        r"[xX]\s*(\d+)\b",
-        r"(\d+)\s*[uU]n\b",
-        r"(\d+)\s*[uU]\b",
-    ]
-    for patron in patrones:
-        match = re.search(patron, nombre_producto, re.IGNORECASE)
-        if match:
-            return int(match.group(1))
-    return None
 
 
 def buscar_productos_api(taxon_id, page=1):
@@ -242,12 +172,7 @@ def procesar_producto(producto, included_map):
         cantidad = extraer_cantidad(nombre)
 
         # Precio por unidad
-        precio_por_unidad = None
-        if precio and cantidad and cantidad > 0:
-            if es_formula(nombre):
-                precio_por_unidad = round(precio / cantidad * 1000)
-            else:
-                precio_por_unidad = round(precio / cantidad)
+        precio_por_unidad = calcular_precio_por_unidad(precio, cantidad, nombre)
 
         en_stock = 1 if attrs.get("in_stock", True) else 0
 
@@ -268,37 +193,6 @@ def procesar_producto(producto, included_map):
     except Exception as e:
         print(f"  AVISO: Error procesando producto: {e}")
         return None
-
-
-def guardar_csv(productos, ruta_archivo):
-    """Guarda la lista de productos en un archivo CSV."""
-    if not productos:
-        print("No hay productos para guardar.")
-        return
-
-    os.makedirs(os.path.dirname(ruta_archivo), exist_ok=True)
-
-    columnas = [
-        "nombre",
-        "precio",
-        "marca",
-        "cantidad_unidades",
-        "precio_por_unidad",
-        "imagen",
-        "precio_lista",
-        "url",
-        "tienda",
-        "fecha_extraccion",
-        "en_stock",
-    ]
-
-    with open(ruta_archivo, "w", newline="", encoding="utf-8") as archivo:
-        escritor = csv.DictWriter(archivo, fieldnames=columnas)
-        escritor.writeheader()
-        escritor.writerows(productos)
-
-    print(f"\nDatos guardados en: {ruta_archivo}")
-    print(f"Total de productos guardados: {len(productos)}")
 
 
 def main():

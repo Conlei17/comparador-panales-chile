@@ -8,7 +8,6 @@ publica (OCAPI v19.1) que retorna JSON limpio.
 Endpoint: https://beta.cruzverde.cl/s/Chile/dw/shop/v19_1/product_search
 """
 
-import csv
 import os
 import re
 import time
@@ -21,6 +20,15 @@ try:
     from scrapers.http_utils import obtener_json
 except ImportError:
     from http_utils import obtener_json
+
+try:
+    from scrapers.common import (limpiar_precio, extraer_marca, extraer_cantidad,
+                                  es_formula, calcular_precio_por_unidad, guardar_csv,
+                                  MARCAS_CONOCIDAS, FORMULAS_KEYWORDS)
+except ImportError:
+    from common import (limpiar_precio, extraer_marca, extraer_cantidad,
+                        es_formula, calcular_precio_por_unidad, guardar_csv,
+                        MARCAS_CONOCIDAS, FORMULAS_KEYWORDS)
 
 # --- CONFIGURACION ---
 
@@ -74,18 +82,6 @@ PAUSA_ENTRE_PAGINAS = 2
 # URL base para construir URLs de productos
 URL_BASE_PRODUCTO = "https://www.cruzverde.cl"
 
-# Marcas conocidas para deteccion
-MARCAS_CONOCIDAS = [
-    "Pampers", "Huggies", "Babysec", "Cotidian", "Goodnites",
-    "Win", "Tutte", "Pequenin", "Tena", "Plenitud",
-    "Ladysoft", "Aiwibi", "Emubaby", "Moltex", "Chelino",
-    "Bambo", "Pingo", "Naty", "Eco Boom", "Biobaby",
-    "Nan", "Similac", "Nidal", "Enfamil", "S-26", "Alula",
-    "Nutrilon", "Blemil", "Nestogen",
-    "Johnsons", "Johnson",
-    "WaterWipes", "Waterwipes",
-]
-
 # SKUs de Cruz Verde cuyo nombre generico no identifica la marca
 # Mapeo: fragmento de URL -> marca correcta
 URL_MARCA_OVERRIDE = {
@@ -123,76 +119,6 @@ def buscar_productos_api(query, count=PRODUCTOS_POR_PAGINA, start=0, refine=None
 
     print(f"  API: q={query}, start={start}, count={count}" + (f", refine={refine}" if refine else ""))
     return obtener_json(API_URL, HEADERS, params=params, timeout=TIMEOUT)
-
-
-def extraer_marca(nombre_producto):
-    """
-    Intenta detectar la marca del producto a partir de su nombre.
-    Usa marcas conocidas, luego sublíneas de producto, luego primera palabra.
-    """
-    nombre_lower = nombre_producto.lower()
-    for marca in MARCAS_CONOCIDAS:
-        if marca.lower() in nombre_lower:
-            return marca
-
-    # Sublíneas que identifican marca cuando el nombre no contiene la marca directa
-    SUBLINEAS_MARCA = [
-        ("premium care", "Pampers"),
-        ("confort sec", "Pampers"),
-        ("super premium", "Babysec"),
-        ("premium", "Babysec"),
-        ("ultrasuave", "Emubaby"),
-    ]
-    for sublinea, marca in SUBLINEAS_MARCA:
-        if sublinea in nombre_lower:
-            return marca
-
-    primera_palabra = nombre_producto.split()[0] if nombre_producto.split() else "Desconocida"
-    return primera_palabra
-
-
-FORMULAS_KEYWORDS = [
-    "fórmula", "formula", "leche infantil", "leche en polvo",
-    "nan ", "nido", "similac", "enfamil", "s-26", "s26",
-    "alula", "nidal", "nutrilon", "blemil",
-]
-
-
-def es_formula(nombre):
-    """Detecta si el producto es una fórmula infantil."""
-    nombre_lower = nombre.lower()
-    return any(kw in nombre_lower for kw in FORMULAS_KEYWORDS)
-
-
-def extraer_cantidad(nombre_producto):
-    """
-    Intenta extraer la cantidad de unidades del nombre del producto.
-    Para fórmulas infantiles, extrae el peso en gramos.
-    """
-    # Para fórmulas: extraer peso en gramos o kilogramos
-    if es_formula(nombre_producto):
-        match_kg = re.search(r"(\d+(?:[.,]\d+)?)\s*kg\b", nombre_producto, re.IGNORECASE)
-        if match_kg:
-            return int(float(match_kg.group(1).replace(",", ".")) * 1000)
-        match_gramos = re.search(r"(\d+)\s*(?:g|grs|gr|gramos)\b", nombre_producto, re.IGNORECASE)
-        if match_gramos:
-            return int(match_gramos.group(1))
-
-    patrones = [
-        r"(\d+)\s*(?:pa[ñn]ales)\b",
-        r"(\d+)\s*(?:toallitas|toallas)\b",
-        r"(\d+)\s*(?:unidades|unid|und)\b",
-        r"(\d+)\s*(?:hojas)\b",
-        r"x\s*(\d+)\s*(?:un|u)\b",
-        r"[xX](\d+)\b",
-        r"(\d+)\s*[uU]\b",
-        r"(\d+)\s*(?:un)\b",
-    ]
-    for patron in patrones:
-        match = re.search(patron, nombre_producto, re.IGNORECASE)
-        if match:
-            return int(match.group(1))
-    return None
 
 
 def procesar_hit(hit):
@@ -259,12 +185,7 @@ def procesar_hit(hit):
         cantidad = extraer_cantidad(nombre)
 
         # Precio por unidad (precio/kg para fórmulas, precio/unidad para el resto)
-        precio_por_unidad = None
-        if precio and cantidad and cantidad > 0:
-            if es_formula(nombre):
-                precio_por_unidad = round(precio / cantidad * 1000)
-            else:
-                precio_por_unidad = round(precio / cantidad)
+        precio_por_unidad = calcular_precio_por_unidad(precio, cantidad, nombre)
 
         en_stock = 1 if hit.get("orderable", True) else 0
 
@@ -285,39 +206,6 @@ def procesar_hit(hit):
     except Exception as e:
         print(f"  AVISO: Error procesando hit: {e}")
         return None
-
-
-def guardar_csv(productos, ruta_archivo):
-    """
-    Guarda la lista de productos en un archivo CSV.
-    """
-    if not productos:
-        print("No hay productos para guardar.")
-        return
-
-    os.makedirs(os.path.dirname(ruta_archivo), exist_ok=True)
-
-    columnas = [
-        "nombre",
-        "precio",
-        "marca",
-        "cantidad_unidades",
-        "precio_por_unidad",
-        "imagen",
-        "precio_lista",
-        "url",
-        "tienda",
-        "fecha_extraccion",
-        "en_stock",
-    ]
-
-    with open(ruta_archivo, "w", newline="", encoding="utf-8") as archivo:
-        escritor = csv.DictWriter(archivo, fieldnames=columnas)
-        escritor.writeheader()
-        escritor.writerows(productos)
-
-    print(f"\nDatos guardados en: {ruta_archivo}")
-    print(f"Total de productos guardados: {len(productos)}")
 
 
 def main():

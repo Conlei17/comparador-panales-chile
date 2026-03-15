@@ -22,6 +22,27 @@ try:
 except ImportError:
     from http_utils import obtener_pagina
 
+try:
+    from scrapers.common import (
+        limpiar_precio,
+        extraer_marca,
+        extraer_cantidad,
+        es_formula,
+        calcular_precio_por_unidad,
+        guardar_csv,
+        FORMULAS_KEYWORDS,
+    )
+except ImportError:
+    from common import (
+        limpiar_precio,
+        extraer_marca,
+        extraer_cantidad,
+        es_formula,
+        calcular_precio_por_unidad,
+        guardar_csv,
+        FORMULAS_KEYWORDS,
+    )
+
 # --- CONFIGURACION ---
 
 # Categorias a scrapear (URL + CGID para API Demandware)
@@ -88,99 +109,6 @@ def obtener_pagina_api(start, cgid):
     """
     url = f"{URL_API_GRID}?cgid={cgid}&start={start}&sz={PRODUCTOS_POR_PAGINA}"
     return obtener_pagina(url, HEADERS, TIMEOUT)
-
-
-def limpiar_precio(texto_precio):
-    """
-    Convierte un texto de precio como "$16.690" en un numero entero: 16690.
-
-    Retorna:
-        int o None si no se pudo convertir.
-    """
-    if not texto_precio:
-        return None
-
-    solo_numeros = re.sub(r"[^\d]", "", texto_precio)
-
-    if solo_numeros:
-        return int(solo_numeros)
-    return None
-
-
-def extraer_marca(nombre_producto):
-    """
-    Intenta detectar la marca del producto a partir de su nombre.
-    """
-    marcas_conocidas = [
-        "Pampers",
-        "Huggies",
-        "Babysec",
-        "Cotidian",
-        "Goodnites",
-        "Win",
-        "Tutte",
-        "Pequenin",
-        "Tena",
-        "Plenitud",
-        "Ladysoft",
-        "Aiwibi",
-        "Emubaby",
-        "Moltex",
-        "Chelino",
-        "Bambo",
-        "Pingo",
-        "Naty",
-        "Eco Boom",
-        "Biobaby",
-    ]
-
-    nombre_lower = nombre_producto.lower()
-    for marca in marcas_conocidas:
-        if marca.lower() in nombre_lower:
-            return marca
-
-    primera_palabra = nombre_producto.split()[0] if nombre_producto.split() else "Desconocida"
-    return primera_palabra
-
-
-FORMULAS_KEYWORDS = [
-    "fórmula", "formula", "leche infantil", "leche en polvo",
-    "nan ", "nido", "similac", "enfamil", "s-26", "s26",
-    "alula", "nidal", "nutrilon", "blemil",
-]
-
-
-def es_formula(nombre):
-    """Detecta si el producto es una fórmula infantil."""
-    nombre_lower = nombre.lower()
-    return any(kw in nombre_lower for kw in FORMULAS_KEYWORDS)
-
-
-def extraer_cantidad(nombre_producto):
-    """
-    Intenta extraer la cantidad de unidades del nombre del producto.
-    Para fórmulas infantiles, extrae el peso en gramos.
-    """
-    # Para fórmulas: extraer peso en gramos o kilogramos
-    if es_formula(nombre_producto):
-        match_kg = re.search(r"(\d+(?:[.,]\d+)?)\s*kg\b", nombre_producto, re.IGNORECASE)
-        if match_kg:
-            return int(float(match_kg.group(1).replace(",", ".")) * 1000)
-        match_gramos = re.search(r"(\d+)\s*(?:g|grs|gr|gramos)\b", nombre_producto, re.IGNORECASE)
-        if match_gramos:
-            return int(match_gramos.group(1))
-
-    patrones = [
-        r"(\d+)\s*(?:pa[ñn]ales)\b",
-        r"(\d+)\s*(?:unidades|unid|und)\b",
-        r"x\s*(\d+)\s*(?:un|u)\b",
-        r"(\d+)\s*(?:un)\b",
-    ]
-    for patron in patrones:
-        match = re.search(patron, nombre_producto, re.IGNORECASE)
-        if match:
-            return int(match.group(1))
-    return None
 
 
 def extraer_precio_por_unidad_texto(texto):
@@ -302,10 +230,9 @@ def extraer_productos(soup):
 
             if es_formula(nombre):
                 # Para fórmulas: calcular precio por kilo
-                if precio and cantidad and cantidad > 0:
-                    precio_por_unidad = round(precio / cantidad * 1000)
+                precio_por_unidad = calcular_precio_por_unidad(precio, cantidad, nombre)
             else:
-                # Intentar extraer del texto de precio fraccionado
+                # Intentar extraer del texto de precio fraccionado (Ahumada-specific)
                 ppu_elem = contenedor.select_one(
                     ".preccio-fracionado, .precio-fraccionado, "
                     "[class*='fracionado'], [class*='fraccionado']"
@@ -314,8 +241,8 @@ def extraer_productos(soup):
                     precio_por_unidad = extraer_precio_por_unidad_texto(ppu_elem.get_text())
 
                 # Si no se encontro el precio por unidad, calcularlo
-                if not precio_por_unidad and precio and cantidad and cantidad > 0:
-                    precio_por_unidad = round(precio / cantidad)
+                if not precio_por_unidad:
+                    precio_por_unidad = calcular_precio_por_unidad(precio, cantidad, nombre)
 
             # --- IMAGEN ---
             img_elem = contenedor.select_one("img")
@@ -377,39 +304,6 @@ def detectar_total_paginas(soup):
                 max_pagina = numero
 
     return max_pagina
-
-
-def guardar_csv(productos, ruta_archivo):
-    """
-    Guarda la lista de productos en un archivo CSV.
-    """
-    if not productos:
-        print("No hay productos para guardar.")
-        return
-
-    os.makedirs(os.path.dirname(ruta_archivo), exist_ok=True)
-
-    columnas = [
-        "nombre",
-        "precio",
-        "marca",
-        "cantidad_unidades",
-        "precio_por_unidad",
-        "imagen",
-        "precio_lista",
-        "url",
-        "tienda",
-        "fecha_extraccion",
-        "en_stock",
-    ]
-
-    with open(ruta_archivo, "w", newline="", encoding="utf-8") as archivo:
-        escritor = csv.DictWriter(archivo, fieldnames=columnas)
-        escritor.writeheader()
-        escritor.writerows(productos)
-
-    print(f"\nDatos guardados en: {ruta_archivo}")
-    print(f"Total de productos guardados: {len(productos)}")
 
 
 def main():

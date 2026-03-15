@@ -20,23 +20,20 @@ import time
 import unicodedata
 from collections import defaultdict
 from flask import Flask, render_template, request, jsonify, Response, redirect, abort
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from urllib.parse import urlencode, urljoin
 from alertas import (inicializar_alertas, crear_alerta, confirmar_alerta,
                      cancelar_alerta, enviar_email_confirmacion, validar_email,
                      verificar_alertas, ARCHIVO_ALERTAS_DB)
+from config import (
+    DB_PATH, PRECIOS_DB_URL, ALERTAS_DB_URL, REFRESH_INTERVAL,
+    GITHUB_TOKEN, GITHUB_REPO, GITHUB_ALERTAS_PATH,
+)
 
 # --- CONFIGURACION ---
 
-DIR_PROYECTO = os.path.dirname(os.path.abspath(__file__))
-ARCHIVO_DB = os.path.join(DIR_PROYECTO, "data", "precios.db")
-
-PRECIOS_DB_URL = "https://raw.githubusercontent.com/Conlei17/comparador-panales-chile/data/data/precios.db"
-ALERTAS_DB_URL = "https://raw.githubusercontent.com/Conlei17/comparador-panales-chile/data/data/alertas.db"
-REFRESH_INTERVAL = 4 * 3600  # 4 horas
-
-GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
-GITHUB_REPO = "Conlei17/comparador-panales-chile"
-GITHUB_ALERTAS_PATH = "data/alertas.db"
+ARCHIVO_DB = str(DB_PATH)
 
 
 def descargar_precios_db():
@@ -137,6 +134,7 @@ _refresh_thread = threading.Thread(target=_refresh_loop, daemon=True)
 _refresh_thread.start()
 
 app = Flask(__name__)
+limiter = Limiter(get_remote_address, app=app, default_limits=[])
 
 # Allowlist: productos validos deben contener al menos una de estas palabras
 INCLUIR_PATRONES = [
@@ -280,6 +278,8 @@ def conectar_db():
     """Abre conexion a la base de datos SQLite."""
     global _db_migrada
     conn = sqlite3.connect(ARCHIVO_DB)
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA synchronous=NORMAL")
     conn.row_factory = sqlite3.Row
     if not _db_migrada:
         cursor = conn.cursor()
@@ -1402,24 +1402,30 @@ def producto_detalle(cat_slug, marca_slug, producto_slug):
     mejor_precio = ofertas_en_stock[0].get("precio") if ofertas_en_stock else None
     mejor_ppu = ofertas_en_stock[0].get("precio_por_unidad") if ofertas_en_stock else None
 
-    # Consultar historico para cada producto_id, agrupado por tienda
+    # Consultar historico para todos los producto_ids en una sola query
     conn = conectar_db()
     cursor = conn.cursor()
     historico_por_tienda = {}
-    for oferta in ofertas:
-        tienda = oferta["tienda"]
-        pid = oferta["id"]
-        cursor.execute("""
-            SELECT pr.precio, pr.precio_por_unidad, pr.fecha_scraping
+
+    ids = [o["id"] for o in ofertas]
+    if ids:
+        placeholders = ",".join("?" for _ in ids)
+        cursor.execute(f"""
+            SELECT pr.producto_id, pr.precio, pr.precio_por_unidad, pr.fecha_scraping
             FROM precios pr
-            WHERE pr.producto_id = ?
+            WHERE pr.producto_id IN ({placeholders})
             ORDER BY pr.fecha_scraping ASC
-        """, (pid,))
-        datos = [dict(row) for row in cursor.fetchall()]
-        if datos:
-            if tienda not in historico_por_tienda:
-                historico_por_tienda[tienda] = []
-            historico_por_tienda[tienda].extend(datos)
+        """, ids)
+
+        # Mapear producto_id -> tienda para agrupar resultados
+        pid_a_tienda = {o["id"]: o["tienda"] for o in ofertas}
+        for row in cursor.fetchall():
+            dato = dict(row)
+            tienda = pid_a_tienda.get(dato["producto_id"])
+            if tienda:
+                if tienda not in historico_por_tienda:
+                    historico_por_tienda[tienda] = []
+                historico_por_tienda[tienda].append(dato)
 
     conn.close()
 
@@ -1697,6 +1703,7 @@ def sitemap_xml():
 # =============================================================
 
 @app.route("/api/alerta/suscribir", methods=["POST"])
+@limiter.limit("5 per minute")
 def alerta_suscribir():
     """Crea una nueva alerta de precio."""
     data = request.get_json()
