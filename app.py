@@ -274,10 +274,21 @@ def construir_url_amigable(categoria=None, marca=None, talla=None):
     return path
 
 
+_db_migrada = False
+
 def conectar_db():
     """Abre conexion a la base de datos SQLite."""
+    global _db_migrada
     conn = sqlite3.connect(ARCHIVO_DB)
     conn.row_factory = sqlite3.Row
+    if not _db_migrada:
+        cursor = conn.cursor()
+        cursor.execute("PRAGMA table_info(precios)")
+        columnas = [col[1] for col in cursor.fetchall()]
+        if "en_stock" not in columnas:
+            cursor.execute("ALTER TABLE precios ADD COLUMN en_stock INTEGER DEFAULT 1")
+            conn.commit()
+        _db_migrada = True
     return conn
 
 
