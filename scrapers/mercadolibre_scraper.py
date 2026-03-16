@@ -198,12 +198,20 @@ def obtener_pagina_ml(session, url):
                 print("  Challenge detectado, resolviendo...")
                 resuelto = resolver_challenge(session)
                 if resuelto:
-                    time.sleep(0.3)
-                    resp = session.get(url, headers=_headers(), timeout=TIMEOUT)
-                    # Si sigue siendo challenge, reintentar
-                    if "verifyChallenge" in resp.text:
-                        print("  Challenge persiste despues de resolver, reintentando...")
-                        time.sleep(1)
+                    # Esperar como lo haria un browser real renderizando la pagina
+                    time.sleep(random.uniform(2, 4))
+                    resp = session.get(url, headers=_headers(), timeout=TIMEOUT,
+                                       allow_redirects=False)
+                    # Verificar rate limit en el retry
+                    if resp.status_code in (301, 302, 303, 307, 308):
+                        location = resp.headers.get("Location", "")
+                        if "account-verification" in location:
+                            print("  BLOQUEADO post-challenge.")
+                            return "RATE_LIMITED"
+                    # Si sigue siendo challenge, reintentar con mas pausa
+                    if resp.status_code == 200 and "verifyChallenge" in resp.text:
+                        print("  Challenge persiste, reintentando...")
+                        time.sleep(random.uniform(3, 6))
                         continue
 
             if resp.status_code != 200:
