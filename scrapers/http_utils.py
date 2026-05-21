@@ -81,6 +81,11 @@ def obtener_pagina(url, headers, timeout=15, max_reintentos=3):
     resp = _hacer_request(url, headers, timeout, max_reintentos)
     if resp is None:
         return None
+    # Si el servidor no declara charset, requests asume ISO-8859-1 y corrompe
+    # los acentos (ej: "Pañal" -> "PaÃ±al"). En ese caso usamos la deteccion
+    # real del contenido (apparent_encoding) para no romper los nombres.
+    if "charset" not in resp.headers.get("Content-Type", "").lower():
+        resp.encoding = resp.apparent_encoding
     return BeautifulSoup(resp.text, "lxml")
 
 

@@ -42,8 +42,13 @@ CLIENT_ID = os.environ.get("CRUZVERDE_CLIENT_ID", "c19ce24d-1677-4754-b9f7-c1939
 PRODUCTOS_POR_PAGINA = 24
 
 # Queries de busqueda por categoria
+# NOTA: antes la query "pañales" usaba refine="c_Genero=Infantil", pero Cruz
+# Verde cambio los valores de ese atributo custom (ahora son Femenino/Unisex,
+# ya no Infantil) y el refine pasó a devolver 0 resultados. En vez de depender
+# de un atributo que la tienda renombra, no filtramos por refine y dejamos que
+# EXCLUIR_ADULTO descarte por nombre los productos de adulto que se cuelen.
 QUERIES = [
-    {"q": "pañales", "refine": "c_Genero=Infantil"},
+    {"q": "pañales"},
     {"q": "pampers"},
     {"q": "babysec"},
     {"q": "toallitas humedas bebe"},
@@ -131,6 +136,11 @@ def procesar_hit(hit):
     Retorna:
         dict con el producto en formato estandar o None si no se pudo procesar.
     """
+    # La API a veces devuelve elementos que no son dicts (strings sueltos en
+    # hits). Los ignoramos en vez de reventar el procesamiento.
+    if not isinstance(hit, dict):
+        return None
+
     try:
         nombre = hit.get("product_name", "")
         if not nombre or len(nombre) < 3:
@@ -146,6 +156,8 @@ def procesar_hit(hit):
         # Precio de venta
         precio = None
         prices = hit.get("prices", {})
+        if not isinstance(prices, dict):
+            prices = {}
         if prices:
             precio = prices.get("price-sale-cl")
             if precio is None:
@@ -168,7 +180,7 @@ def procesar_hit(hit):
         # Imagen
         imagen = None
         image = hit.get("image")
-        if image:
+        if isinstance(image, dict):
             imagen = image.get("dis_base_link") or image.get("link")
 
         # URL del producto (formato: /slug-del-nombre/ID.html)
@@ -251,6 +263,9 @@ def main():
 
             nuevos = 0
             for hit in hits:
+                # Saltar hits malformados (la API a veces incluye strings sueltos)
+                if not isinstance(hit, dict):
+                    continue
                 product_id = hit.get("product_id", "")
 
                 # Deduplicar por product_id

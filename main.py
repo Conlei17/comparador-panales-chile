@@ -874,7 +874,10 @@ def main():
     scrapers = {
         "liquimax": ejecutar_scraper_liquimax,
         "pepito": ejecutar_scraper_pepito,
-        "lapanalera": ejecutar_scraper_lapanalera,
+        # La Pañalera: tienda bloqueada en Jumpseller (devuelve 404 en todo,
+        # link utm_medium=blocked_store). Desactivada para no gastar requests
+        # ni generar alertas falsas. Reactivar si la tienda vuelve a operar.
+        # "lapanalera": ejecutar_scraper_lapanalera,
         "tintin": ejecutar_scraper_tintin,
         "santaisabel": ejecutar_scraper_santaisabel,
         "jumbo": ejecutar_scraper_jumbo,

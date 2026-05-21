@@ -167,6 +167,13 @@ def resolver_challenge(session):
     respuesta = f"{seed};{nonce}"
     session.cookies.set("_bmc", quote(respuesta, safe=""),
                         domain=".mercadolibre.cl", path="/")
+
+    # CLAVE: el JS del challenge, al terminar, llama a navigateToContinue() que
+    # setea la cookie _bm_skipml=true ANTES de recargar la pagina. Sin esta
+    # cookie el _bmc por si solo no basta y el challenge se repite en loop.
+    # Esta cookie es la que efectivamente deja pasar al contenido real.
+    session.cookies.set("_bm_skipml", "true",
+                        domain=".mercadolibre.cl", path="/")
     return True
 
 
