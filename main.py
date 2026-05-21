@@ -380,7 +380,8 @@ _SCRAPER_A_TIENDA = {
 # Tiendas desactivadas a proposito (ej: tienda caida/bloqueada). El monitoreo
 # las ignora para no generar alertas falsas por tener 0 productos.
 TIENDAS_DESACTIVADAS = {
-    "La Pañalera",  # tienda bloqueada en Jumpseller (404 en todo)
+    "La Pañalera",   # tienda bloqueada en Jumpseller (404 en todo)
+    "MercadoLibre",  # geo-bloqueado desde la IP de GitHub (necesita proxy CL)
 }
 
 
@@ -898,7 +899,10 @@ def main():
         "cruzverde": ejecutar_scraper_cruzverde,
         "salcobrand": ejecutar_scraper_salcobrand,
         "preunic": ejecutar_scraper_preunic,
-        "mercadolibre": ejecutar_scraper_mercadolibre,
+        # MercadoLibre: geo-bloqueado desde la IP de GitHub (devuelve 0 en la
+        # nube aunque el scraper funciona local). Desactivado por ahora.
+        # Reactivar si se agrega un proxy residencial chileno al workflow.
+        # "mercadolibre": ejecutar_scraper_mercadolibre,
     }
 
     resultados = {}
