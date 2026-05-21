@@ -377,6 +377,12 @@ _SCRAPER_A_TIENDA = {
     "mercadolibre": "MercadoLibre",
 }
 
+# Tiendas desactivadas a proposito (ej: tienda caida/bloqueada). El monitoreo
+# las ignora para no generar alertas falsas por tener 0 productos.
+TIENDAS_DESACTIVADAS = {
+    "La Pañalera",  # tienda bloqueada en Jumpseller (404 en todo)
+}
+
 
 def verificar_conteos(productos, conn, resultados_scrapers=None):
     """
@@ -423,6 +429,13 @@ def verificar_conteos(productos, conn, resultados_scrapers=None):
     for tienda in sorted(set(list(conteo_hoy.keys()) + list(promedios.keys()))):
         hoy = conteo_hoy.get(tienda, 0)
         promedio = promedios.get(tienda)
+
+        if tienda in TIENDAS_DESACTIVADAS:
+            # No alertar por tiendas desactivadas a proposito
+            linea = f"  {tienda}: {hoy} productos (desactivada, ignorando)"
+            print(f"  {linea}")
+            log_lineas.append(linea)
+            continue
 
         if promedio and promedio > 0:
             ratio = hoy / promedio
